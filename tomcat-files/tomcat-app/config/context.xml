@@ -1,0 +1,7 @@
+<Context path="/tomcat-app" docBase="/home/tomcat-files/tomcat-app/files">
+  <Resource name="jdbc/GymDB" auth="Container" type="javax.sql.DataSource"
+               maxTotal="100" maxIdle="30" maxWaitMillis="10000"
+               username="Stankovich" password="${gym.db.password}"
+	       driverClassName="com.mysql.jdbc.Driver"
+               url="jdbc:mysql://localhost:3306/Stankovich?autoReconnect=true"/>
+</Context>
