@@ -5,7 +5,7 @@ A web-based gym management system
 ## Team 3
 | Name | Email |
 |------|-------|
-| Alexandra Stankovic | alexandra.stankovic@sjsu.edu |
+| Alexandra Stankovich | alexandra.stankovich@sjsu.edu |
 | Kristy Chan | kristychiching.chan@sjsu.edu |
 | Hein Nanda | frank.nanda@sjsu.edu |
 
