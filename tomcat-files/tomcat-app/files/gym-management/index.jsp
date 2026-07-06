@@ -227,7 +227,7 @@
 	    && (auth_user_type >= 0) && (auth_user_type <= 1)) {
 	    if (auth_user_type == 0) {
 		PreparedStatement cookie_stmt = con.prepareStatement(
-"UPDATE employees SET user_cookie = '' WHERE user_id = ?");
+"UPDATE employees SET user_cookie = null WHERE user_id = ?");
 		cookie_stmt.setInt(1, auth_user_id);
 		try {
 		    cookie_stmt.executeUpdate();
@@ -236,7 +236,7 @@
 		cookie_stmt.close();
 	    } else {
 		PreparedStatement cookie_stmt = con.prepareStatement(
-"UPDATE members SET user_cookie = '' WHERE user_id = ?");
+"UPDATE members SET user_cookie = null WHERE user_id = ?");
 		cookie_stmt.setInt(1, auth_user_id);
 		try {
 		    cookie_stmt.executeUpdate();
