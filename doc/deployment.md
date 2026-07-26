@@ -22,39 +22,12 @@ File `mysql-connector-j-9.7.0.jar` from MySQL Connector/J package (originally us
 
 All files under `/home/tomcat-files/tomcat-app/files` must be readable for Tomcat server user.
 
-Database "Stankovich" should be accessible to "Stankovich" database user and contain tables created with the following statements:
-```
-CREATE TABLE `users` (
-  `user_name` varchar(45) NOT NULL,
-  `user_password` varchar(45) NOT NULL,
-  `user_id` int NOT NULL,
-  `user_type` varchar(45) NOT NULL,
-  PRIMARY KEY (`user_name`),
-  UNIQUE KEY `user_id_UNIQUE` (`user_id`)
-);
-```
-```
-CREATE TABLE `employees` (
-  `user_id` int NOT NULL,
-  `first_name` varchar(45) DEFAULT NULL,
-  `last_name` varchar(45) DEFAULT NULL,
-  `user_cookie` varchar(45) DEFAULT NULL,
-  PRIMARY KEY (`user_id`),
-  UNIQUE KEY `user_cookie_UNIQUE` (`user_cookie`)
-);
-```
-```
-CREATE TABLE `members` (
-  `user_id` int NOT NULL,
-  `first_name` varchar(45) DEFAULT NULL,
-  `last_name` varchar(45) DEFAULT NULL,
-  `user_cookie` varchar(45) DEFAULT NULL,
-  PRIMARY KEY (`user_id`),
-  UNIQUE KEY `user_cookie_UNIQUE` (`user_cookie`)
-);
-```
-After configuration Tomcat server should be restarted.
+Database "Stankovich" should be accessible to "Stankovich" database user and contain tables matching the data model in `ProjectDataModel-andDBDesignReport`: `users`, `employees`, `members`, `sports`, `locations`, `` `groups` ``, `sport_groups`, `location_groups`, `class_schedule`, `class_coach`, `cancellations`, and `group_membership`.
 
-Database tables format is preliminary and will be changed to provide functionality of this application.
+Notably, authentication cookie fields (`cookie_value`, `cookie_expiration_time`) live on `users` along with `first_name`/`last_name`, not on `employees`/`members` as in an earlier draft of this schema — `employees` only carries `coach_flag`/`admin_flag`, and `members` only carries `goals`/`health_notes`/`active_flag`.
+
+A database still on the earlier draft schema can be brought up to date with `doc/db/002-schedule-and-groups.sql`.
+
+After configuration Tomcat server should be restarted.
 
 Future releases will allow more configuration of paths, URLs and databases.
