@@ -108,6 +108,15 @@ h1, h2, h3 {
     gap: 20px;
 }
 
+.container-input {
+    max-width: 800px;
+    margin: 32px auto;
+    padding: 0 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
 .container-narrow {
     max-width: 460px;
 }
@@ -239,6 +248,20 @@ label {
     font-weight: 600;
     color: var(--color-muted);
     margin-bottom: 6px;
+}
+
+label.check {
+    display: inline;
+    margin-right: 50px;
+}
+
+label.result {
+    display: inline;
+}
+
+label.result_value {
+    display: inline;
+    font-weight: 200;
 }
 
 input[type="text"],
