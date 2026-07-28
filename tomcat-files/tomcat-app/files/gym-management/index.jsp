@@ -1,4 +1,5 @@
 <%@ page import="java.security.SecureRandom,java.util.Base64"%>
+<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8" />
