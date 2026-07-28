@@ -24,6 +24,8 @@
 	<% if (auth_admin_flag == 1) { %>
     <a href="users.jsp"
        class="<%= "users".equals(active_page) ? "navbar-link active" : "navbar-link" %>">View Users</a>
+    <a href="add-member.jsp"
+       class="<%= "add-member".equals(active_page) ? "navbar-link active" : "navbar-link" %>">Add Member</a>
     <a href="add-employee.jsp"
        class="<%= "add-employee".equals(active_page) ? "navbar-link active" : "navbar-link" %>">Add Employee</a>
     <% } %>
