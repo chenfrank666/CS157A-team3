@@ -95,6 +95,7 @@
     SimpleDateFormat time_fmt = new SimpleDateFormat("h:mm a");
     String active_page = "schedule";
 %>
+<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8" />
