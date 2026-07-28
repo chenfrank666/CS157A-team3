@@ -20,6 +20,11 @@
 	<% } %>
 	<a href="groups.jsp"
 	   class="<%= "groups".equals(active_page) ? "navbar-link active" : "navbar-link" %>">Groups</a>
+
+	<% if (auth_admin_flag == 1) { %>
+    <a href="users.jsp"
+       class="<%= "users".equals(active_page) ? "navbar-link active" : "navbar-link" %>">View Users</a>
+    <% } %>
     </nav>
     <div class="navbar-user">
 	<span class="badge <%= auth_user_type == 0 ? "badge-employee" : "badge-member" %>"><%= nav_role %></span>
