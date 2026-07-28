@@ -1,0 +1,95 @@
+<%@ page import="javax.naming.Context,javax.naming.InitialContext,javax.sql.DataSource,java.sql.*,java.util.Base64"%>
+<%!
+    /* First byte of the cookie encodes user type: 0 = employee, 1 = member */
+    private static int getCookieUserType(String cookie)
+    {
+	try {
+	    byte[] cookie_bin = Base64.getDecoder().decode(cookie);
+	    if (cookie_bin.length < 18)
+		return -1;
+	    else
+		return (int) cookie_bin[0];
+	} catch (IllegalArgumentException e) {
+	    return -1;
+	}
+    }
+%>
+<%
+    /* Database connection, shared by every page that includes this fragment */
+    java.sql.Connection con = null;
+    try {
+	Context initContext = new InitialContext();
+	Context envContext = (Context) initContext.lookup("java:comp/env");
+	DataSource ds = (DataSource) envContext.lookup("jdbc/GymDB");
+	con = ds.getConnection();
+    } catch(SQLException e) {
+	con = null;
+    }
+
+    /* Authentication with a cookie. Per the DB design report, cookie_value and
+       cookie_expiration_time live on the "users" superclass, not on the
+       "employees"/"members" subclasses. */
+    String auth_cookie = null;
+    String auth_user_fname = null;
+    String auth_user_lname = null;
+    int auth_user_id = -1;
+    int auth_user_type = -1;
+    int auth_coach_flag = 0;
+    int auth_admin_flag = 0;
+    int auth_member_active = 0;
+
+    Cookie[] auth_cookies = request.getCookies();
+    if (auth_cookies != null) {
+	for (Cookie cookie : auth_cookies) {
+	    if (cookie.getName().equals("gym_auth")) {
+		auth_cookie = cookie.getValue();
+	    }
+	}
+    }
+    if ((auth_cookie != null) && !auth_cookie.isEmpty()) {
+	auth_user_type = getCookieUserType(auth_cookie);
+	if ((auth_user_type < 0) || (auth_user_type > 1)) {
+	    auth_cookie = null;
+	    auth_user_type = -1;
+	}
+    } else {
+	auth_cookie = null;
+    }
+    if (con == null) {
+	auth_cookie = null;
+	auth_user_type = -1;
+    }
+    if (auth_cookie != null) {
+	String auth_query = (auth_user_type == 0)
+	    ? "SELECT u.user_id, u.first_name, u.last_name, e.coach_flag, e.admin_flag "
+	    + "FROM users u JOIN employees e ON e.user_id = u.user_id "
+	    + "WHERE u.cookie_value = ? AND (u.cookie_expiration_time IS NULL OR u.cookie_expiration_time > NOW())"
+	    : "SELECT u.user_id, u.first_name, u.last_name, m.active_flag "
+	    + "FROM users u JOIN members m ON m.user_id = u.user_id "
+	    + "WHERE u.cookie_value = ? AND (u.cookie_expiration_time IS NULL OR u.cookie_expiration_time > NOW())";
+	try {
+	    PreparedStatement auth_stmt = con.prepareStatement(auth_query);
+	    auth_stmt.setString(1, auth_cookie);
+	    ResultSet auth_result = auth_stmt.executeQuery();
+	    if (auth_result.next()) {
+		auth_user_id = auth_result.getInt(1);
+		auth_user_fname = auth_result.getString(2);
+		auth_user_lname = auth_result.getString(3);
+		if (auth_user_type == 0) {
+		    auth_coach_flag = auth_result.getInt(4);
+		    auth_admin_flag = auth_result.getInt(5);
+		} else {
+		    auth_member_active = auth_result.getInt(4);
+		}
+	    } else {
+		auth_cookie = null;
+		auth_user_type = -1;
+	    }
+	    auth_result.close();
+	    auth_stmt.close();
+	} catch(SQLException e) {
+	    auth_cookie = null;
+	    auth_user_type = -1;
+	}
+    }
+%>

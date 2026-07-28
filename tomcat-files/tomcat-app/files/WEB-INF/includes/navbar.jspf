@@ -1,0 +1,32 @@
+<%-- Shared top navigation. Expects auth_* vars from auth-check.jspf and an
+     "active_page" String ("home" | "schedule" | "groups") set before include. --%>
+<header class="navbar">
+    <a class="navbar-brand" href="/tomcat-app/gym-management/">
+	<span class="navbar-logo">&#127947;</span> Gym Management System
+    </a>
+    <% if (auth_user_id >= 0) {
+	boolean nav_can_view_schedule = (auth_user_type == 1)
+	    || (auth_user_type == 0 && (auth_coach_flag == 1 || auth_admin_flag == 1));
+	String nav_role = (auth_user_type == 0)
+	    ? (auth_admin_flag == 1 ? "Administrator" : (auth_coach_flag == 1 ? "Coach" : "Employee"))
+	    : "Member";
+    %>
+    <nav class="navbar-links">
+	<a href="/tomcat-app/gym-management/"
+	   class="<%= "home".equals(active_page) ? "navbar-link active" : "navbar-link" %>">Home</a>
+	<% if (nav_can_view_schedule) { %>
+	<a href="schedule.jsp"
+	   class="<%= "schedule".equals(active_page) ? "navbar-link active" : "navbar-link" %>">Schedule</a>
+	<% } %>
+	<a href="groups.jsp"
+	   class="<%= "groups".equals(active_page) ? "navbar-link active" : "navbar-link" %>">Groups</a>
+    </nav>
+    <div class="navbar-user">
+	<span class="badge <%= auth_user_type == 0 ? "badge-employee" : "badge-member" %>"><%= nav_role %></span>
+	<span class="navbar-name"><%= auth_user_fname %> <%= auth_user_lname %></span>
+	<form action="/tomcat-app/gym-management/" method="post" class="inline-form">
+	    <button type="submit" class="btn btn-ghost btn-sm">Log out</button>
+	</form>
+    </div>
+    <% } %>
+</header>

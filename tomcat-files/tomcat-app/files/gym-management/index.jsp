@@ -1,38 +1,13 @@
-<%@ page import="javax.naming.Context,javax.naming.InitialContext,javax.sql.DataSource,java.sql.*,java.security.SecureRandom,java.util.Base64"%>
+<%@ page import="java.security.SecureRandom,java.util.Base64"%>
 <html>
 <head>
+    <meta charset="UTF-8" />
     <title>Gym Management System</title>
-    <style>
-     h1 {
-	 text-align: center;
-     }
-     .login-box {
-	 display: grid;
-	 grid-template-columns: auto auto;
-	 background-color: #e0e0e0;
-	 color: black;
-	 padding: 10px;
-     }
-     .login-box-left {
-	 background-color: #e0e0e0;
-	 color: black;
-	 border: 1px solid #e0e0e0;
-	 padding: 5px;
-	 text-align: left;
-     }
-     .login-box-right {
-	 background-color: #e0e0e0;
-	 color: black;
-	 border: 1px solid #e0e0e0;
-	 padding: 5px;
-	 text-align: right;
-     }
-    </style>
+    <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    <h1>Gym Management System</h1>
     <%!
-    /* Functions for cookie handling */
+    /* Generates a fresh authentication cookie; the first byte is the user type */
     private static String makeCookie(int type)
     {
 	SecureRandom random = new SecureRandom();
@@ -42,15 +17,6 @@
         System.arraycopy(cookie_data, 0, cookie_bin, 1, 17);
 	cookie_bin[0] = (byte) type;
         return Base64.getEncoder().encodeToString(cookie_bin);
-    }
-
-    private static int getCookieUserType(String cookie)
-    {
-	byte[] cookie_bin = Base64.getDecoder().decode(cookie);
-        if (cookie_bin.length < 18)
-        return -1;
-	else
-	return (int) cookie_bin[0];
     }
     %>
     <%
@@ -63,93 +29,14 @@
 	login_password = request.getParameter("password");
 	if (login_user == null)	log_out = 1;
     } /* Non-POST requests will have those values set to null */
-
-    /* Database connection */
-    java.sql.Connection con = null;
-    try {
-	Context initContext = new InitialContext();
-	Context envContext = (Context) initContext.lookup("java:comp/env");
-	DataSource ds = (DataSource) envContext.lookup("jdbc/GymDB");
-	con = ds.getConnection();
-    } catch(SQLException e) {
-        out.println("Database connection error<br />");
-    }
-
-    /* Authentication with a cookie */
-    String auth_cookie = null;
-    String auth_user_fname = null;
-    String auth_user_lname = null;
-    int auth_user_id = -1;
-    int auth_user_type = -1;
-    Cookie[] cookies = request.getCookies();
-    if (cookies != null) {
-	for (Cookie cookie : cookies) {
-	    if (cookie.getName().equals("gym_auth")) {
-		auth_cookie = cookie.getValue();
-	    }
-	}
-    }
-    if (auth_cookie != null) {
-	auth_user_type = getCookieUserType(auth_cookie);
-	if ((auth_user_type < 0) || (auth_user_type > 1)) {
-	    auth_cookie = null;
-	    auth_user_type = -1;
-	}
-    }
-    if (con == null) {
-	auth_cookie = null;
-	auth_user_type = -1;
-    }
-    if (auth_cookie != null) {
-	if (auth_user_type == 0) {
-	    /* Employee */
-	    PreparedStatement cookie_auth_stmt = con.prepareStatement(
-"SELECT user_id, first_name, last_name FROM employees WHERE user_cookie = ?");
-	    cookie_auth_stmt.setString(1, auth_cookie);
-	    try {
-		ResultSet cookie_auth_result = cookie_auth_stmt.executeQuery();
-		if (cookie_auth_result.next()) {
-		    auth_user_id = cookie_auth_result.getInt(1);
-		    auth_user_fname = cookie_auth_result.getString(2);
-		    auth_user_lname = cookie_auth_result.getString(3);
-		} else {
-		    auth_cookie = null;
-		    auth_user_type = -1;
-		}
-		cookie_auth_result.close();
-	    } catch(SQLException e) {
-		auth_cookie = null;
-		auth_user_type = -1;
-	    }
-	    cookie_auth_stmt.close();
-	} else {
-	    /* Member */
-	    PreparedStatement cookie_auth_stmt = con.prepareStatement(
-"SELECT user_id, first_name, last_name FROM members WHERE user_cookie = ?");
-	    cookie_auth_stmt.setString(1, auth_cookie);
-	    try {
-		ResultSet cookie_auth_result = cookie_auth_stmt.executeQuery();
-		if (cookie_auth_result.next()) {
-		    auth_user_id = cookie_auth_result.getInt(1);
-		    auth_user_fname = cookie_auth_result.getString(2);
-		    auth_user_lname = cookie_auth_result.getString(3);
-		} else {
-		    auth_cookie = null;
-		    auth_user_type = -1;
-		}
-		cookie_auth_result.close();
-	    } catch(SQLException e) {
-		auth_cookie = null;
-		auth_user_type = -1;
-	    }
-	    cookie_auth_stmt.close();
-	}
-    }
-
+    %>
+    <%@ include file="/WEB-INF/includes/auth-check.jspf" %>
+    <%
     /* New login authentication */
+    boolean login_attempted = (login_user != null) && (login_password != null);
     int login_user_type = -1;
     int login_user_id = -1;
-    if ((con != null) && (login_user!= null) && (login_password != null)) {
+    if (login_attempted && (con != null)) {
 	PreparedStatement user_stmt = con.prepareStatement(
 "SELECT user_id, user_type, user_password FROM users WHERE user_name = ?");
 	user_stmt.setString(1, login_user);
@@ -160,56 +47,30 @@
 		    /* Login successful */
 		    login_user_id = user_result.getInt(1);
 		    login_user_type = user_result.getInt(2);
-		    if (login_user_type == 0) {
-			/* Employee */
-			PreparedStatement cookie_stmt = con.prepareStatement(
-"UPDATE employees SET user_cookie = ? WHERE user_id = ?");
-			cookie_stmt.setInt(2, login_user_id);
-			int cookie_result = 0;
-			do {
-			    String login_cookie = makeCookie(login_user_type);
-			    cookie_stmt.setString(1, login_cookie);
-			    try {
-				cookie_result =	cookie_stmt.executeUpdate();
-			    } catch(SQLException e) {
-				cookie_result = -1;
-			    }
-			    if (cookie_result == 1) {
-				response.addCookie(
-				    new Cookie("gym_auth", login_cookie));
-				response.sendRedirect(
-				    "/tomcat-app/gym-management/");
-			    }
-			} while (cookie_result == 0);
-			cookie_stmt.close();
-		    } else {
-			if (login_user_type == 1) {
-			    /* Member */
-			    PreparedStatement cookie_stmt = con.prepareStatement(
-"UPDATE members SET user_cookie = ? WHERE user_id = ?");
-			    cookie_stmt.setInt(2, login_user_id);
-			    int cookie_result = 0;
-			    do {
-				String login_cookie = makeCookie(login_user_type);
-				cookie_stmt.setString(1, login_cookie);
-				try {
-				    cookie_result = cookie_stmt.executeUpdate();
-				} catch(SQLException e) {
-				    cookie_result = -1;
-				}
-				if (cookie_result == 1) {
-				    response.addCookie(
-					new Cookie("gym_auth", login_cookie));
-				    response.sendRedirect(
-					"/tomcat-app/gym-management/");
-				}
-			    } while (cookie_result == 0);
-			    cookie_stmt.close();
-			} else {
-			    login_user_id = -1;
-			    login_user_type = -1;
+		    java.sql.Timestamp expiry = new java.sql.Timestamp(
+			System.currentTimeMillis() + 30L * 24 * 60 * 60 * 1000);
+		    PreparedStatement cookie_stmt = con.prepareStatement(
+"UPDATE users SET cookie_value = ?, cookie_expiration_time = ? WHERE user_id = ?");
+		    int cookie_result = 0;
+		    do {
+			String login_cookie = makeCookie(login_user_type);
+			cookie_stmt.setString(1, login_cookie);
+			cookie_stmt.setTimestamp(2, expiry);
+			cookie_stmt.setInt(3, login_user_id);
+			try {
+			    cookie_result = cookie_stmt.executeUpdate();
+			} catch(SQLException e) {
+			    cookie_result = -1;
 			}
-		    }
+			if (cookie_result == 1) {
+			    Cookie auth = new Cookie("gym_auth", login_cookie);
+			    auth.setPath("/tomcat-app/gym-management/");
+			    auth.setMaxAge(30 * 24 * 60 * 60);
+			    response.addCookie(auth);
+			    response.sendRedirect("/tomcat-app/gym-management/");
+			}
+		    } while (cookie_result == 0);
+		    cookie_stmt.close();
 		}
 	    }
 	    user_result.close();
@@ -220,102 +81,86 @@
 	login_user = null;
 	login_password = null;
     }
+    boolean login_failed = login_attempted && (login_user_id < 0);
 
     /* Log out handling */
     if (log_out == 1) {
-	if ((con != null) && (auth_user_id >= 0)
-	    && (auth_user_type >= 0) && (auth_user_type <= 1)) {
-	    if (auth_user_type == 0) {
-		PreparedStatement cookie_stmt = con.prepareStatement(
-"UPDATE employees SET user_cookie = null WHERE user_id = ?");
-		cookie_stmt.setInt(1, auth_user_id);
-		try {
-		    cookie_stmt.executeUpdate();
-		} catch(SQLException e) {
-		}
-		cookie_stmt.close();
-	    } else {
-		PreparedStatement cookie_stmt = con.prepareStatement(
-"UPDATE members SET user_cookie = null WHERE user_id = ?");
-		cookie_stmt.setInt(1, auth_user_id);
-		try {
-		    cookie_stmt.executeUpdate();
-		} catch(SQLException e) {
-		}
-		cookie_stmt.close();
+	if ((con != null) && (auth_user_id >= 0)) {
+	    PreparedStatement cookie_stmt = con.prepareStatement(
+"UPDATE users SET cookie_value = NULL, cookie_expiration_time = NULL WHERE user_id = ?");
+	    cookie_stmt.setInt(1, auth_user_id);
+	    try {
+		cookie_stmt.executeUpdate();
+	    } catch(SQLException e) {
 	    }
+	    cookie_stmt.close();
 	}
-	response.addCookie(new Cookie("gym_auth", ""));
+	Cookie auth = new Cookie("gym_auth", "");
+	auth.setPath("/tomcat-app/gym-management/");
+	auth.setMaxAge(0);
+	response.addCookie(auth);
 	auth_user_id = -1;
 	auth_user_type = -1;
 	auth_user_fname = null;
 	auth_user_lname = null;
+	auth_coach_flag = 0;
+	auth_admin_flag = 0;
+	auth_member_active = 0;
     }
-    %>
-    <div>
-	<%
-	if (auth_user_id < 0) {
-	%>
-	<form class="login-box"
-	      action="/tomcat-app/gym-management/" method="post">
-	    <div class="login-box-right"><label>Login</label></div>
-	    <div class="login-box-left"><input name="login"
-					       type="text" /></div>
-	    <div class="login-box-right"><label>Password</label></div>
-	    <div class="login-box-left"><input name="password"
-					       type="password" /></div>
-	    <div class="login-box-right"><input
-					     type="submit"
-					     value="Login" /></div>
-	</form>
-	<%
-	} else {
-	%>
-	<form class="login-box"
-	      action="/tomcat-app/gym-management/" method="post">
-	    <div class="login-box-right"><input
-					     type="submit"
-					     value="Log out" /></div>
-	</form>
-	<%
-	}
-	%>
-    </div>
-    <div>
-	<%
-	if ((login_user_id >= 0) || (auth_user_id >= 0)) {
-	    out.println("Authenticated user type:" + auth_user_type
-		+ " Authenticated user ID:" + auth_user_id
-		+ "<br/>");
-	}
 
-	if ((con != null) && (auth_user_type >= 0)) {
-	    if (auth_user_type == 0) {
-		out.println("Initial entries in table \"employees\": <br/>");
-		Statement stmt = con.createStatement();
-		ResultSet rs = stmt.executeQuery("SELECT * FROM employees");
-		while (rs.next()) {
-		    out.println("" + rs.getInt(1) + " "
-			+ rs.getString(2) + " "
-			+ rs.getString(3) + "<br/>");
-		}
-		rs.close();
-		stmt.close();
-	    } else {
-		out.println("Initial entries in table \"members\": <br/>");
-		Statement stmt = con.createStatement();
-		ResultSet rs = stmt.executeQuery("SELECT * FROM members");
-		while (rs.next()) {
-		    out.println("" + rs.getInt(1) + " "
-			+ rs.getString(2) + " "
-			+ rs.getString(3) + "<br/>");
-		}
-		rs.close();
-		stmt.close();
-	    }
-	}
-	%>
+    boolean can_view_schedule = (auth_user_type == 1)
+	|| (auth_user_type == 0 && (auth_coach_flag == 1 || auth_admin_flag == 1));
+    String active_page = "home";
+    %>
+    <%@ include file="/WEB-INF/includes/navbar.jspf" %>
+
+    <% if (auth_user_id < 0) { %>
+    <div class="login-shell">
+	<div class="card container-narrow">
+	    <div class="hero">
+		<h1>Gym Management System</h1>
+		<p class="subtitle">Sign in to view your schedule and manage your groups.</p>
+	    </div>
+	    <% if (login_failed) { %>
+	    <div class="message message-error">Incorrect username or password.</div>
+	    <% } %>
+	    <form action="/tomcat-app/gym-management/" method="post">
+		<div class="form-row">
+		    <label for="login">Username</label>
+		    <input id="login" name="login" type="text" autocomplete="username" />
+		</div>
+		<div class="form-row">
+		    <label for="password">Password</label>
+		    <input id="password" name="password" type="password" autocomplete="current-password" />
+		</div>
+		<button type="submit" class="btn" style="width: 100%;">Log in</button>
+	    </form>
+	</div>
     </div>
+    <% } else { %>
+    <main class="container">
+	<div class="card">
+	    <h1>Welcome back, <%= auth_user_fname %>!</h1>
+	    <p class="subtitle">
+		<% if (auth_user_type == 1) { %>
+		Here's quick access to your classes and groups.
+		<% } else if (auth_admin_flag == 1) { %>
+		You have administrator access to the full schedule and group roster.
+		<% } else if (auth_coach_flag == 1) { %>
+		Here's quick access to the classes you coach.
+		<% } else { %>
+		Here's quick access to gym groups.
+		<% } %>
+	    </p>
+	    <div class="quick-links">
+		<% if (can_view_schedule) { %>
+		<a class="btn" href="schedule.jsp">View schedule</a>
+		<% } %>
+		<a class="btn btn-secondary" href="groups.jsp">Browse groups</a>
+	    </div>
+	</div>
+    </main>
+    <% } %>
     <%
     if (con != null) con.close();
     %>
