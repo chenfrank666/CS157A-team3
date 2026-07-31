@@ -117,9 +117,11 @@
 
     <% if (auth_user_id < 0) { %>
     <div class="login-shell">
-	<div class="card container-narrow">
-	    <div class="hero">
-		<h1>Gym Management System</h1>
+		<div class="card container-narrow">
+			<div class="hero">
+				<!-- Added Login Logo -->
+				<img src="images/logo_origin.PNG" alt="Gym Logo" class="login-logo" />
+				<h1>Gym Management System</h1>
 		<p class="subtitle">Sign in to view your schedule and manage your groups.</p>
 	    </div>
 	    <% if (login_failed) { %>

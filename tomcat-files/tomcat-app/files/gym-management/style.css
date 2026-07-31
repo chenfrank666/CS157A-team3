@@ -1,19 +1,16 @@
 /* Gym Management System - shared styles */
 
 :root {
-    --color-bg: #f4f5f7;
+    --color-bg: #0f172a;
     --color-surface: #ffffff;
     --color-text: #1f2937;
     --color-muted: #6b7280;
     --color-border: #e5e7eb;
     --color-primary: #0d9488;
-    --color-primary-dark: #0b7a70;
+    --color-primary-dark: #0f766e;
     --color-primary-light: #ccfbf1;
-    --color-accent: #f97316;
-    --color-danger: #dc2626;
-    --color-danger-light: #fee2e2;
-    --color-navbar: #111827;
-    --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.10);
+    --color-navbar: rgba(15, 23, 42, 0.9);
+    --shadow-card: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
     --radius: 12px;
 }
 
@@ -22,11 +19,16 @@
 }
 
 body {
-    margin: 0;
+    background-color: var(--color-bg);
+    background-image: url('images/gym-bg.webp');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background: var(--color-bg);
     color: var(--color-text);
     line-height: 1.5;
+    margin: 0;
 }
 
 a {
@@ -45,7 +47,9 @@ h1, h2, h3 {
     display: flex;
     align-items: center;
     gap: 24px;
-    background: var(--color-navbar);
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     color: #f9fafb;
     padding: 14px 28px;
     flex-wrap: wrap;
@@ -126,7 +130,7 @@ h1, h2, h3 {
 .card {
     background: var(--color-surface);
     border-radius: var(--radius);
-    box-shadow: var(--shadow-card);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
     padding: 28px;
 }
 
@@ -418,11 +422,10 @@ tr:last-child td {
 /* Login page */
 
 .login-shell {
-    min-height: calc(100vh - 64px);
+    min-height: 100vh;
     display: flex;
-    align-items: center;
     justify-content: center;
-    padding: 20px;
+    align-items: center;
 }
 
 .hero {
@@ -449,4 +452,40 @@ tr:last-child td {
     .card {
 	padding: 20px;
     }
+}
+
+/* --- Login Page Logo Sizing --- */
+.login-logo {
+    width: 85px; 
+    height: auto;
+    display: block;
+    margin: 0 auto 15px auto;
+    border-radius: 50%;
+}
+
+/* --- Navbar Logo Sizing --- */
+.nav-logo {
+    height: 32px;
+    width: auto;
+    margin-right: 12px;
+    vertical-align: middle;
+    border-radius: 6px;
+    background: #ffffff;
+    padding: 2px;
+}
+
+/* Scrollable table container */
+.table-scroll {
+    max-height: 320px;
+    overflow-y: auto;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+}
+
+/* Sticky table header so columns stay visible while scrolling, for user.jsp*/
+.table-scroll th {
+    position: sticky;
+    top: 0;
+    background-color: var(--color-surface);
+    z-index: 1;
 }
