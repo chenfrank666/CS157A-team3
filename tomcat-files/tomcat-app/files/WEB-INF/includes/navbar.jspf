@@ -2,7 +2,7 @@
      "active_page" String ("home" | "schedule" | "groups") set before include. --%>
 <header class="navbar">
     <a class="navbar-brand" href="/tomcat-app/gym-management/">
-	<span class="navbar-logo">&#127947;</span> Gym Management System
+	<img src="images/logo_origin.PNG" alt="Logo" class="nav-logo" /> Gym Management System
     </a>
     <% if (auth_user_id >= 0) {
 	boolean nav_can_view_schedule = (auth_user_type == 1)
