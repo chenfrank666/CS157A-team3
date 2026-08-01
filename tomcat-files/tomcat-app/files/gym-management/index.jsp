@@ -38,49 +38,49 @@
     int login_user_type = -1;
     int login_user_id = -1;
     if (login_attempted && (con != null)) {
-	PreparedStatement user_stmt = con.prepareStatement(
-"SELECT user_id, user_type, user_password FROM users WHERE user_name = ?");
-	user_stmt.setString(1, login_user);
-	try {
-	    ResultSet user_result = user_stmt.executeQuery();
-	    if (user_result.next()) {
-		if (user_result.getString(3).equals(login_password)) {
-		    /* Login successful */
-		    login_user_id = user_result.getInt(1);
-		    login_user_type = user_result.getInt(2);
-		    java.sql.Timestamp expiry = new java.sql.Timestamp(
-			System.currentTimeMillis() + 30L * 24 * 60 * 60 * 1000);
-		    PreparedStatement cookie_stmt = con.prepareStatement(
-"UPDATE users SET cookie_value = ?, cookie_expiration_time = ? WHERE user_id = ?");
-		    int cookie_result = 0;
-		    do {
-			String login_cookie = makeCookie(login_user_type);
-			cookie_stmt.setString(1, login_cookie);
-			cookie_stmt.setTimestamp(2, expiry);
-			cookie_stmt.setInt(3, login_user_id);
-			try {
-			    cookie_result = cookie_stmt.executeUpdate();
-			} catch(SQLException e) {
-			    cookie_result = -1;
-			}
-			if (cookie_result == 1) {
-			    Cookie auth = new Cookie("gym_auth", login_cookie);
-			    auth.setPath("/tomcat-app/gym-management/");
-			    auth.setMaxAge(30 * 24 * 60 * 60);
-			    response.addCookie(auth);
-			    response.sendRedirect("/tomcat-app/gym-management/");
-			}
-		    } while (cookie_result == 0);
-		    cookie_stmt.close();
-		}
-	    }
-	    user_result.close();
-	} catch(SQLException e) {
-	}
-	user_stmt.close();
-	/* Don't use those values after this point */
-	login_user = null;
-	login_password = null;
+        PreparedStatement user_stmt = con.prepareStatement(
+            "SELECT user_id, user_type, user_password, active_flag FROM users WHERE user_name = ?"
+        );
+        user_stmt.setString(1, login_user);
+        try {
+            ResultSet user_result = user_stmt.executeQuery();
+            if (user_result.next()) {
+                if (user_result.getString(3).equals(login_password) && user_result.getInt(4) == 1) {
+                    /* Login successful */
+                    login_user_id = user_result.getInt(1);
+                    login_user_type = user_result.getInt(2);
+                    java.sql.Timestamp expiry = new java.sql.Timestamp(
+                        System.currentTimeMillis() + 30L * 24 * 60 * 60 * 1000);
+                    PreparedStatement cookie_stmt = con.prepareStatement(
+                        "UPDATE users SET cookie_value = ?, cookie_expiration_time = ? WHERE user_id = ?");
+                    int cookie_result = 0;
+                    do {
+                        String login_cookie = makeCookie(login_user_type);
+                        cookie_stmt.setString(1, login_cookie);
+                        cookie_stmt.setTimestamp(2, expiry);
+                        cookie_stmt.setInt(3, login_user_id);
+                        try {
+                            cookie_result = cookie_stmt.executeUpdate();
+                        } catch(SQLException e) {
+                            cookie_result = -1;
+                        }
+                        if (cookie_result == 1) {
+                            Cookie auth = new Cookie("gym_auth", login_cookie);
+                            auth.setPath("/tomcat-app/gym-management/");
+                            auth.setMaxAge(30 * 24 * 60 * 60);
+                            response.addCookie(auth);
+                            response.sendRedirect("/tomcat-app/gym-management/");
+                        }
+                    } while (cookie_result == 0);
+                    cookie_stmt.close();
+                }
+            }
+            user_result.close();
+        } catch(SQLException e) {
+        }
+        user_stmt.close();
+        login_user = null;
+        login_password = null;
     }
     boolean login_failed = login_attempted && (login_user_id < 0);
 
@@ -125,7 +125,7 @@
 		<p class="subtitle">Sign in to view your schedule and manage your groups.</p>
 	    </div>
 	    <% if (login_failed) { %>
-	    <div class="message message-error">Incorrect username or password.</div>
+	    <div class="message message-error">Incorrect username/password, or account is deactivated.</div>
 	    <% } %>
 	    <form action="/tomcat-app/gym-management/" method="post">
 		<div class="form-row">

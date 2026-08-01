@@ -25,6 +25,7 @@
 	String lname = request.getParameter("lname");
 	String coach_flag = request.getParameter("coach_flag");
 	String admin_flag = request.getParameter("admin_flag");
+	String active_flag = request.getParameter("active_flag");
 
 	if (password1.equals(password2) && !password1.equals("")) {
 	    java.util.Date now_util = new java.util.Date();
@@ -39,13 +40,14 @@
 		if (getid_res.next()) {
 		    new_user_id = getid_res.getInt(1) + 1;
 		    getid_res.close();
+		    
+		    // Updated INSERT statement to include active_flag in users table
 		    String insert_user_sql =
 		    "INSERT INTO users (user_name, user_password, user_id, "
 		    + "user_type, "
 		    + "first_name, last_name, start_date, end_date, "
-		    + "cookie_value, "
-		    + "cookie_expiration_time) VALUES(?, ?, ?, 0, ?, ?, ?, "
-		    + "null, null, null)";
+		    + "cookie_value, cookie_expiration_time, active_flag) "
+		    + "VALUES(?, ?, ?, 0, ?, ?, ?, null, null, null, ?)";
 
 		    PreparedStatement insert_user_stmt =
 		    con.prepareStatement(insert_user_sql);
@@ -55,6 +57,7 @@
 		    insert_user_stmt.setString(4, fname);
 		    insert_user_stmt.setString(5, lname);
 		    insert_user_stmt.setDate(6, now);
+		    insert_user_stmt.setInt(7, (active_flag != null) ? 1 : 0);
 		    insert_user_stmt.executeUpdate();
 		    insert_user_stmt.close();
 
@@ -89,13 +92,11 @@
 		<label class="result_value"><%= lname %></label>
 	    </div>
 	    <div class="form-row">
-		<label class="result"><%
-		if (coach_flag != null) out.print("Coach"); %></label>
-		<label class="result"><%
-		if (admin_flag != null) out.print("Administrator"); %></label>
+		<label class="result"><% if (coach_flag != null) out.print("Coach "); %></label>
+		<label class="result"><% if (admin_flag != null) out.print("Administrator "); %></label>
+		<label class="result"><% if (active_flag != null) out.print("(Active)"); else out.print("(Inactive)"); %></label>
 	    </div>
-	    <button type="submit" class="btn"
-		    style="width: 100%;">Add another employee</button>
+	    <button type="submit" class="btn" style="width: 100%;">Add another employee</button>
 	</form>
     </div>
     <%
@@ -114,39 +115,31 @@
 		</div>
 		<div class="form-row">
 		    <label>Username</label>
-		    <input id="username" name="username" type="text"
-			   value="<%= username %>" />
+		    <input id="username" name="username" type="text" value="<%= username %>" />
 		</div>
 		<div class="form-row">
 		    <label>Password</label>
-		    <input id="password1" name="password1" type="password"
-			   value="<%= password1 %>" />
+		    <input id="password1" name="password1" type="password" value="<%= password1 %>" />
 		</div>
 		<div class="form-row">
 		    <label>Password Again</label>
-		    <input id="password2" name="password2" type="password"
-			   value="<%= password2 %>" />
+		    <input id="password2" name="password2" type="password" value="<%= password2 %>" />
 		</div>
 		<div class="form-row">
 		    <label>First name</label>
-		    <input id="fname" name="fname" type="text"
-			   value="<%= fname %>" />
+		    <input id="fname" name="fname" type="text" value="<%= fname %>" />
 		    <label>Last name</label>
-		    <input id="lname" name="lname" type="text"
-			   value="<%= lname %>" />
+		    <input id="lname" name="lname" type="text" value="<%= lname %>" />
 		</div>
 		<div class="form-row">
-		    <input id="coach_flag" name="coach_flag" type="checkbox"
-			   value="coach_flag"
-		    <% if (coach_flag != null) out.print("checked"); %> />
+		    <input id="coach_flag" name="coach_flag" type="checkbox" value="coach_flag" <% if (coach_flag != null) out.print("checked"); %> />
 		    <label class="check">Coach</label>
-		    <input id="admin_flag" name="admin_flag" type="checkbox"
-			   value="admin_flag"
-		    <% if (admin_flag != null) out.print("checked"); %> />
+		    <input id="admin_flag" name="admin_flag" type="checkbox" value="admin_flag" <% if (admin_flag != null) out.print("checked"); %> />
 		    <label class="check">Administrator</label>
+		    <input id="active_flag" name="active_flag" type="checkbox" value="active_flag" <% if (active_flag != null) out.print("checked"); %> />
+		    <label class="check">Active</label>
 		</div>
-		<button type="submit" class="btn"
-			style="width: 100%;">Add</button>
+		<button type="submit" class="btn" style="width: 100%;">Add</button>
 	    </form>
 	</div>
 	<%
@@ -160,14 +153,11 @@
     <form action="add-employee.jsp" method="post">
 	<div class="form-row">
 	    <label>Username</label>
-	    <input id="username" name="username" type="text"
-		   value="<%= username %>" />
+	    <input id="username" name="username" type="text" value="<%= username %>" />
 	</div>
 	<div class="form-row">
-	    <label>Password<%
-	    if (password1.equals("")) out.print(" (re-enter)"); %></label>
-	    <input id="password1" name="password1" type="password"
-		   value="<%= password1 %>" />
+	    <label>Password<% if (password1.equals("")) out.print(" (re-enter)"); %></label>
+	    <input id="password1" name="password1" type="password" value="<%= password1 %>" />
 	</div>
 	<div class="form-row">
 	    <label>Password Again (re-enter)</label>
@@ -175,21 +165,17 @@
 	</div>
 	<div class="form-row">
 	    <label>First name</label>
-	    <input id="fname" name="fname" type="text"
-		   value="<%= fname %>" />
+	    <input id="fname" name="fname" type="text" value="<%= fname %>" />
 	    <label>Last name</label>
-	    <input id="lname" name="lname" type="text"
-		   value="<%= lname %>" />
+	    <input id="lname" name="lname" type="text" value="<%= lname %>" />
 	</div>
 	<div class="form-row">
-	    <input id="coach_flag" name="coach_flag" type="checkbox"
-		   value="coach_flag"
-		   <% if (coach_flag != null) out.print("checked"); %> />
+	    <input id="coach_flag" name="coach_flag" type="checkbox" value="coach_flag" <% if (coach_flag != null) out.print("checked"); %> />
 	    <label class="check">Coach</label>
-	    <input id="admin_flag" name="admin_flag" type="checkbox"
-		   value="admin_flag"
-		   <% if (admin_flag != null) out.print("checked"); %> />
+	    <input id="admin_flag" name="admin_flag" type="checkbox" value="admin_flag" <% if (admin_flag != null) out.print("checked"); %> />
 	    <label class="check">Administrator</label>
+	    <input id="active_flag" name="active_flag" type="checkbox" value="active_flag" <% if (active_flag != null) out.print("checked"); %> />
+	    <label class="check">Active</label>
 	</div>
 	<button type="submit" class="btn" style="width: 100%;">Add</button>
     </form>
@@ -221,10 +207,12 @@
 	    <label class="check">Coach</label>
 	    <input id="admin_flag" name="admin_flag" type="checkbox" value="admin_flag" />
 	    <label class="check">Administrator</label>
+	    <input id="active_flag" name="active_flag" type="checkbox" value="active_flag" checked />
+	    <label class="check">Active</label>
 	</div>
 	<button type="submit" class="btn" style="width: 100%;">Add</button>
     </form>
     </div>
-    <% }  %>
+    <% } %>
 </body>
 </html>

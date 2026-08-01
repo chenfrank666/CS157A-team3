@@ -117,12 +117,20 @@
 		    <h1>Class Schedule</h1>
 		    <p class="subtitle">Classes over the next two weeks.</p>
 		</div>
-		<% if (can_toggle_view) { %>
-		<div class="tabs">
-		    <a class="tab <%= show_mine ? "active" : "" %>" href="<%= mine_href %>">My classes</a>
-		    <a class="tab <%= !show_mine ? "active" : "" %>" href="<%= all_href %>">All classes</a>
+		<div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+		    <% if (is_coach) { %>
+			<a href="request-change.jsp" class="btn btn-secondary btn-sm">
+			    + Request Schedule Change
+			</a>
+		    <% } %>
+		    
+		    <% if (can_toggle_view) { %>
+			<div class="tabs">
+			    <a class="tab <%= show_mine ? "active" : "" %>" href="<%= mine_href %>">My classes</a>
+			    <a class="tab <%= !show_mine ? "active" : "" %>" href="<%= all_href %>">All classes</a>
+			</div>
+		    <% } %>
 		</div>
-		<% } %>
 	    </div>
 
 	    <% if (cancel_message != null) { %>

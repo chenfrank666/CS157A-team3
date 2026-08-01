@@ -60,36 +60,42 @@
 	auth_user_type = -1;
     }
     if (auth_cookie != null) {
-	String auth_query = (auth_user_type == 0)
-	    ? "SELECT u.user_id, u.first_name, u.last_name, e.coach_flag, e.admin_flag "
-	    + "FROM users u JOIN employees e ON e.user_id = u.user_id "
-	    + "WHERE u.cookie_value = ? AND (u.cookie_expiration_time IS NULL OR u.cookie_expiration_time > NOW())"
-	    : "SELECT u.user_id, u.first_name, u.last_name, m.active_flag "
-	    + "FROM users u JOIN members m ON m.user_id = u.user_id "
-	    + "WHERE u.cookie_value = ? AND (u.cookie_expiration_time IS NULL OR u.cookie_expiration_time > NOW())";
-	try {
-	    PreparedStatement auth_stmt = con.prepareStatement(auth_query);
-	    auth_stmt.setString(1, auth_cookie);
-	    ResultSet auth_result = auth_stmt.executeQuery();
-	    if (auth_result.next()) {
-		auth_user_id = auth_result.getInt(1);
-		auth_user_fname = auth_result.getString(2);
-		auth_user_lname = auth_result.getString(3);
-		if (auth_user_type == 0) {
-		    auth_coach_flag = auth_result.getInt(4);
-		    auth_admin_flag = auth_result.getInt(5);
-		} else {
-		    auth_member_active = auth_result.getInt(4);
-		}
-	    } else {
-		auth_cookie = null;
-		auth_user_type = -1;
-	    }
-	    auth_result.close();
-	    auth_stmt.close();
-	} catch(SQLException e) {
-	    auth_cookie = null;
-	    auth_user_type = -1;
-	}
+        // Query active_flag directly from the users table for both user types
+        String auth_query = "SELECT u.user_id, u.first_name, u.last_name, u.active_flag, "
+                + "e.coach_flag, e.admin_flag "
+                + "FROM users u "
+                + "LEFT JOIN employees e ON e.user_id = u.user_id "
+                + "WHERE u.cookie_value = ? AND (u.cookie_expiration_time IS NULL OR u.cookie_expiration_time > NOW())";
+        try {
+            PreparedStatement auth_stmt = con.prepareStatement(auth_query);
+            auth_stmt.setString(1, auth_cookie);
+            ResultSet auth_result = auth_stmt.executeQuery();
+            if (auth_result.next()) {
+                auth_user_id = auth_result.getInt("user_id");
+                auth_user_fname = auth_result.getString("first_name");
+                auth_user_lname = auth_result.getString("last_name");
+                auth_member_active = auth_result.getInt("active_flag"); // Works for all users now
+
+                if (auth_user_type == 0) {
+                    auth_coach_flag = auth_result.getInt("coach_flag");
+                    auth_admin_flag = auth_result.getInt("admin_flag");
+                }
+
+                // SECURITY CHECK: If user account has been deactivated, invalidate cookie
+                if (auth_member_active == 0) {
+                    auth_cookie = null;
+                    auth_user_id = -1;
+                    auth_user_type = -1;
+                }
+            } else {
+                auth_cookie = null;
+                auth_user_type = -1;
+            }
+            auth_result.close();
+            auth_stmt.close();
+        } catch(SQLException e) {
+            auth_cookie = null;
+            auth_user_type = -1;
+        }
     }
 %>
