@@ -20,6 +20,10 @@
 	<% } %>
 	<a href="groups.jsp"
 	   class="<%= "groups".equals(active_page) ? "navbar-link active" : "navbar-link" %>">Groups</a>
+	<% if (auth_coach_flag == 1 || auth_admin_flag == 1) { %>
+	<a href="requests.jsp"
+	   class="<%= "requests".equals(active_page) ? "navbar-link active" : "navbar-link" %>">Requests</a>
+	<% } %>
 
 	<% if (auth_admin_flag == 1) { %>
     <a href="users.jsp"
