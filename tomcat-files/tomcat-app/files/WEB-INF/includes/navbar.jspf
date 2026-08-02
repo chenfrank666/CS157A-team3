@@ -32,7 +32,7 @@
     <a href="add-employee.jsp"
 		class="<%= "add-employee".equals(active_page) ? "navbar-link active" : "navbar-link" %>">Add Employee</a>
 	<a href="add-group.jsp"
-		class="<%= active_page.equals("add-group") ? "active" : "" %>">Add Group</a>
+		class="<%= active_page.equals("add-group") ? "navbar-link active" : "navbar-link" %>">Add Group</a>
     <% } %>
     </nav>
     <div class="navbar-user">
