@@ -145,16 +145,16 @@ CREATE TABLE `requests` (
 );
 
 INSERT INTO `requests` (`request_type`, `request_text`, `request_date`, `target_date`) VALUES
-  (1, 'Sick leave, need to cancel', '2026-07-01', '2026-07-10'),
-  (2, 'Would like to co-coach this class', '2026-06-25', '2026-07-01'),
-  (3, 'Schedule conflict, need to leave group', '2026-07-02', '2026-08-01'),
-  (4, 'Available to take over', '2026-07-03', '2026-07-15'),
-  (5, 'Facility issue', '2026-07-04', '2026-07-11'),
-  (6, 'Interested in taking this shift', '2026-07-05', '2026-07-20'),
-  (7, 'Moving to a different location', '2026-06-15', '2026-07-31'),
-  (8, 'I can cover this class', '2026-07-06', '2026-07-14'),
-  (9, 'Personal emergency', '2026-07-05', '2026-07-08'),
-  (10,'I will cover the sick leave', '2026-07-02', '2026-07-10');
+  (0, 'Sick leave, need to cancel', '2026-07-01', '2026-07-10'),
+  (1, 'Would like to co-coach this class', '2026-06-25', '2026-07-01'),
+  (2, 'Schedule conflict, need to leave group', '2026-07-02', '2026-08-01'),
+  (1, 'Available to take over', '2026-07-03', '2026-07-15'),
+  (0, 'Facility issue', '2026-07-04', '2026-07-11'),
+  (1, 'Interested in taking this shift', '2026-07-05', '2026-07-20'),
+  (2, 'Moving to a different location', '2026-06-15', '2026-07-31'),
+  (1, 'I can cover this class', '2026-07-06', '2026-07-14'),
+  (0, 'Personal emergency', '2026-07-05', '2026-07-08'),
+  (1, 'I will cover the sick leave', '2026-07-02', '2026-07-10');
 
 CREATE TABLE `class_schedule` (
   `group_id` int NOT NULL,
