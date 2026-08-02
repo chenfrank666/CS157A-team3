@@ -41,7 +41,6 @@
 		    new_user_id = getid_res.getInt(1) + 1;
 		    getid_res.close();
 		    
-		    // Updated INSERT statement to include active_flag in users table
 		    String insert_user_sql =
 		    "INSERT INTO users (user_name, user_password, user_id, "
 		    + "user_type, "
@@ -62,15 +61,14 @@
 		    insert_user_stmt.close();
 
 		    String insert_empl_sql =
-		    "INSERT INTO employees (user_id, cookie_expire, start_date, "
-		    + "end_date, "
-		    + "admin_flag, coach_flag) VALUES(?, null, ?, null, ?, ?)";
+		    "INSERT INTO employees (user_id, "
+		    + "admin_flag, coach_flag) "
+		    + "VALUES(?, ?, ?)";
 		    PreparedStatement insert_empl_stmt =
 		    con.prepareStatement(insert_empl_sql);
 		    insert_empl_stmt.setInt(1, new_user_id);
-		    insert_empl_stmt.setDate(2, now);
-		    insert_empl_stmt.setInt(3, (admin_flag != null) ? 1 : 0);
-		    insert_empl_stmt.setInt(4, (coach_flag != null) ? 1 : 0);
+		    insert_empl_stmt.setInt(2, (admin_flag != null) ? 1 : 0);
+		    insert_empl_stmt.setInt(3, (coach_flag != null) ? 1 : 0);
 		    insert_empl_stmt.executeUpdate();
 		    insert_empl_stmt.close();
     %>

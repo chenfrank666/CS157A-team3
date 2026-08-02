@@ -41,7 +41,6 @@
 		    new_user_id = getid_res.getInt(1) + 1;
 		    getid_res.close();
 
-		    // Insert active_flag directly into the users table
 		    String insert_user_sql =
 		    "INSERT INTO users (user_name, user_password, user_id, "
 		    + "user_type, "
@@ -61,17 +60,15 @@
 		    insert_user_stmt.executeUpdate();
 		    insert_user_stmt.close();
 
-		    // Removed active_flag from members insert query
 		    String insert_memb_sql =
-		    "INSERT INTO members (user_id, cookie_expire, "
-		    + "health_notes, goals, start_date, end_date) "
-		    + "VALUES(?, null, ?, ?, ?, null)";
+		    "INSERT INTO members (user_id, "
+		    + "health_notes, goals) "
+		    + "VALUES(?, ?, ?)";
 		    PreparedStatement insert_memb_stmt =
 		    con.prepareStatement(insert_memb_sql);
 		    insert_memb_stmt.setInt(1, new_user_id);
 		    insert_memb_stmt.setString(2, health_notes);
 		    insert_memb_stmt.setString(3, goals);
-		    insert_memb_stmt.setDate(4, now);
 		    insert_memb_stmt.executeUpdate();
 		    insert_memb_stmt.close();
     %>
