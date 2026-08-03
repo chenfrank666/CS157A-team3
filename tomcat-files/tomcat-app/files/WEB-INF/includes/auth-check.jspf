@@ -76,17 +76,18 @@
                 auth_user_lname = auth_result.getString("last_name");
                 auth_member_active = auth_result.getInt("active_flag"); // Works for all users now
 
-                if (auth_user_type == 0) {
-                    auth_coach_flag = auth_result.getInt("coach_flag");
-                    auth_admin_flag = auth_result.getInt("admin_flag");
-                }
-
                 // SECURITY CHECK: If user account has been deactivated, invalidate cookie
                 if (auth_member_active == 0) {
                     auth_cookie = null;
                     auth_user_id = -1;
                     auth_user_type = -1;
                 }
+
+                if (auth_user_type == 0) {
+                    auth_coach_flag = auth_result.getInt("coach_flag");
+                    auth_admin_flag = auth_result.getInt("admin_flag");
+                }
+
             } else {
                 auth_cookie = null;
                 auth_user_type = -1;
