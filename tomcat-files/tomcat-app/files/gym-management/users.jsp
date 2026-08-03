@@ -84,7 +84,7 @@
                             <th>Admin</th>
                             <th>Coach</th>
                             <th>Status</th>
-                            <th>Action</th>
+                            <th colspan="2">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -157,7 +157,7 @@
                             <th>Goals</th>
                             <th>Health Notes</th>
                             <th>Status</th>
-                            <th>Action</th>
+                            <th colspan="2">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -196,6 +196,13 @@
                                     <button type="submit" class="btn btn-secondary btn-sm" onclick="return confirm('Reactivate this member?');">Activate</button>
                                 </form>
                                 <% } %>
+                            </td>
+                             <td>
+                                <!-- Member Update Button -->
+                                <form action="update-member.jsp" method="get" class="inline-form">
+                                    <input id="user_id" name="user_id" type="hidden" value="<%= memRs.getInt("user_id") %>" />
+					<button type="submit" class="btn btn-secondary btn-sm">Update</button>
+                                </form>
                             </td>
                         </tr>
                         <%  } %>
