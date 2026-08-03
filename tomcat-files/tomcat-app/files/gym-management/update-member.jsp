@@ -78,7 +78,7 @@
 	    update_memb_stmt.close();
     %>
     <div class="card container-input">
-	<form action="users.jsp" method="get">
+	<form>
 	    <div class="form-row">
 		<label>Member updated successfully</label>
 	    </div>
@@ -105,6 +105,8 @@
 	    <div class="form-row">
 		<label class="result"><% if (active_flag != null) out.print("(Active)"); else out.print("(Inactive)"); %></label>
 	    </div>
+	</form>
+	<form action="users.jsp" method="get">
 	    <button type="submit" class="btn" style="width: 100%;">Back to users list</button>
 	</form>
     </div>
