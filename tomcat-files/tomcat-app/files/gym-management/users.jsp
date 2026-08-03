@@ -124,6 +124,13 @@
                                 </form>
                                 <% } %>
                             </td>
+                            <td>
+                                <!-- Employee Update Button -->
+                                <form action="update-employee.jsp" method="get" class="inline-form">
+                                    <input id="user_id" name="user_id" type="hidden" value="<%= empRs.getInt("user_id") %>" />
+					<button type="submit" class="btn btn-secondary btn-sm">Update</button>
+                                </form>
+                            </td>
                         </tr>
                         <%  } %>
                     </tbody>
