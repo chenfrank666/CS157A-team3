@@ -165,7 +165,7 @@
     </main>
     <% } %>
     <%
-    if (con != null) con.close();
+    if (con != null) try { con.close(); } catch (SQLException ignore) {}
     %>
 </body>
 </html>

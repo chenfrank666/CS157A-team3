@@ -1,15 +1,16 @@
 <%@ page import="java.sql.*, javax.naming.*, javax.sql.DataSource" %>
 <%@ include file="/WEB-INF/includes/auth-check.jspf" %>
 <%
-    if (auth_admin_flag != 1) {
+    if ((auth_admin_flag != 1) || (con == null)) {
         response.sendRedirect("/tomcat-app/gym-management/");
+	if (con != null) try { con.close(); } catch (SQLException ignore) {}
         return;
     }
 
     String active_page = "users";
 
     // --- UNIFIED DEACTIVATE / ACTIVATE LOGIC ---
-    if (request.getMethod().equals("POST") && (con != null)) {
+    if (request.getMethod().equals("POST")) {
         try {
             int target_user_id = Integer.parseInt(request.getParameter("target_user_id"));
             String action = request.getParameter("user_action");
@@ -25,6 +26,8 @@
             update_stmt.close();
         } catch (Exception e) {}
         response.sendRedirect("users.jsp");
+	try { con.close(); } catch (SQLException ignore) {}
+        return;
     }
 %>
 <!DOCTYPE html>
@@ -52,17 +55,12 @@
         </div>
 
         <%
-            Connection conn = null;
             PreparedStatement empStmt = null;
             PreparedStatement memStmt = null;
             ResultSet empRs = null;
             ResultSet memRs = null;
 
             try {
-                Context initContext = new InitialContext();
-                Context envContext = (Context) initContext.lookup("java:/comp/env");
-                DataSource ds = (DataSource) envContext.lookup("jdbc/GymDB");
-                conn = ds.getConnection();
         %>
 
         <!-- CARD 1: EMPLOYEES -->
@@ -91,7 +89,7 @@
                         <%
                             String empQuery = "SELECT u.user_id, u.first_name, u.last_name, u.user_name, u.active_flag, e.coach_flag, e.admin_flag " +
                                               "FROM users u JOIN employees e ON u.user_id = e.user_id WHERE u.user_type = 0";
-                            empStmt = conn.prepareStatement(empQuery);
+                            empStmt = con.prepareStatement(empQuery);
                             empRs = empStmt.executeQuery();
 
                             while(empRs.next()) {
@@ -164,7 +162,7 @@
                         <%
                             String memQuery = "SELECT u.user_id, u.first_name, u.last_name, u.user_name, u.active_flag, m.goals, m.health_notes " +
                                               "FROM users u JOIN members m ON u.user_id = m.user_id WHERE u.user_type = 1";
-                            memStmt = conn.prepareStatement(memQuery);
+                            memStmt = con.prepareStatement(memQuery);
                             memRs = memStmt.executeQuery();
 
                             while(memRs.next()) {
@@ -219,7 +217,7 @@
                 if (memRs != null) try { memRs.close(); } catch (SQLException ignore) {}
                 if (empStmt != null) try { empStmt.close(); } catch (SQLException ignore) {}
                 if (memStmt != null) try { memStmt.close(); } catch (SQLException ignore) {}
-                if (conn != null) try { conn.close(); } catch (SQLException ignore) {}
+                try { con.close(); } catch (SQLException ignore) {}
             }
         %>
     </main>

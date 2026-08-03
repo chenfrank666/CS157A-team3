@@ -2,8 +2,9 @@
 <%@ include file="/WEB-INF/includes/auth-check.jspf" %>
 <%
     // Restrict access: Only coaches and administrators can access this page
-    if (auth_coach_flag != 1 && auth_admin_flag != 1) {
+    if ((auth_coach_flag != 1) && (auth_admin_flag != 1) || (con == null)) {
         response.sendRedirect("/tomcat-app/gym-management/");
+	if (con != null) try { con.close(); } catch (SQLException ignore) {}
         return;
     }
 
@@ -19,18 +20,13 @@
         String request_text = request.getParameter("request_text");
 
         if (group_id_str != null && request_type_str != null && target_date != null && !target_date.isEmpty()) {
-            Connection conn = null;
             PreparedStatement reqStmt = null;
             PreparedStatement empReqStmt = null;
             PreparedStatement grpReqStmt = null;
             ResultSet rs = null;
 
             try {
-                Context initContext = new InitialContext();
-                Context envContext = (Context) initContext.lookup("java:/comp/env");
-                DataSource ds = (DataSource) envContext.lookup("jdbc/GymDB");
-                conn = ds.getConnection();
-                conn.setAutoCommit(false); // Transaction for linked requests tables
+                con.setAutoCommit(false); // Transaction for linked requests tables
 
                 int group_id = Integer.parseInt(group_id_str);
                 int request_type = Integer.parseInt(request_type_str);
@@ -38,7 +34,7 @@
                 // 1. Insert into main requests table
                 String reqSql = "INSERT INTO requests (request_type, request_text, request_date, target_date) " +
                                 "VALUES (?, ?, CURDATE(), ?)";
-                reqStmt = conn.prepareStatement(reqSql, Statement.RETURN_GENERATED_KEYS);
+                reqStmt = con.prepareStatement(reqSql, Statement.RETURN_GENERATED_KEYS);
                 reqStmt.setInt(1, request_type);
                 reqStmt.setString(2, request_text);
                 reqStmt.setString(3, target_date);
@@ -52,23 +48,23 @@
 
                 // 2. Link request to coach (request_employee)
                 String empReqSql = "INSERT INTO request_employee (request_id, user_id) VALUES (?, ?)";
-                empReqStmt = conn.prepareStatement(empReqSql);
+                empReqStmt = con.prepareStatement(empReqSql);
                 empReqStmt.setInt(1, new_request_id);
                 empReqStmt.setInt(2, auth_user_id);
                 empReqStmt.executeUpdate();
 
                 // 3. Link request to group (request_group)
                 String grpReqSql = "INSERT INTO request_group (request_id, group_id) VALUES (?, ?)";
-                grpReqStmt = conn.prepareStatement(grpReqSql);
+                grpReqStmt = con.prepareStatement(grpReqSql);
                 grpReqStmt.setInt(1, new_request_id);
                 grpReqStmt.setInt(2, group_id);
                 grpReqStmt.executeUpdate();
 
-                conn.commit();
+                con.commit();
                 message = "Your request has been submitted to the administration team for review!";
                 messageType = "success";
             } catch (Exception e) {
-                if (conn != null) try { conn.rollback(); } catch (SQLException ignore) {}
+                try { con.rollback(); } catch (SQLException ignore) {}
                 message = "Error submitting request: " + e.getMessage();
                 messageType = "error";
             } finally {
@@ -76,7 +72,6 @@
                 if (reqStmt != null) try { reqStmt.close(); } catch (SQLException ignore) {}
                 if (empReqStmt != null) try { empReqStmt.close(); } catch (SQLException ignore) {}
                 if (grpReqStmt != null) try { grpReqStmt.close(); } catch (SQLException ignore) {}
-                if (conn != null) try { conn.close(); } catch (SQLException ignore) {}
             }
         } else {
             message = "Please fill in all required fields.";
@@ -115,15 +110,9 @@
                     <select name="group_id" id="group_id" required style="width: 100%; padding: 10px; border: 1px solid var(--color-border); border-radius: 8px;">
                         <option value="">-- Select a Group --</option>
                         <%
-                            Connection conn = null;
                             PreparedStatement pstmt = null;
                             ResultSet rs = null;
                             try {
-                                Context initContext = new InitialContext();
-                                Context envContext = (Context) initContext.lookup("java:/comp/env");
-                                DataSource ds = (DataSource) envContext.lookup("jdbc/GymDB");
-                                conn = ds.getConnection();
-
                                 String sql = "SELECT g.group_id, s.sport_name, l.location_name " +
                                              "FROM groups g " +
                                              "JOIN sport_groups sg ON g.group_id = sg.group_id " +
@@ -131,7 +120,7 @@
                                              "JOIN location_groups lg ON g.group_id = lg.group_id " +
                                              "JOIN locations l ON lg.location_id = l.location_id " +
                                              "WHERE g.active_flag = 1";
-                                pstmt = conn.prepareStatement(sql);
+                                pstmt = con.prepareStatement(sql);
                                 rs = pstmt.executeQuery();
                                 while(rs.next()) {
                         %>
@@ -145,7 +134,6 @@
                             } finally {
                                 if (rs != null) try { rs.close(); } catch (SQLException ignore) {}
                                 if (pstmt != null) try { pstmt.close(); } catch (SQLException ignore) {}
-                                if (conn != null) try { conn.close(); } catch (SQLException ignore) {}
                             }
                         %>
                     </select>
@@ -178,5 +166,8 @@
             </form>
         </div>
     </main>
+<%
+    try { con.close(); } catch (SQLException ignore) {}
+%>
 </body>
 </html>

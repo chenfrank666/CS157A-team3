@@ -1,8 +1,9 @@
 <%@ page import="java.text.SimpleDateFormat"%>
 <%@ include file="/WEB-INF/includes/auth-check.jspf" %>
 <%
-    if (auth_user_id < 0) {
+    if ((auth_user_id < 0) || (con == null)) {
 	response.sendRedirect("/tomcat-app/gym-management/");
+	if (con != null) try { con.close(); } catch (SQLException ignore) {}
 	return;
     }
 
@@ -21,7 +22,7 @@
     /* Administrators can cancel a class directly (functional requirement:
        "Administrators can select classes for cancellation") */
     String cancel_message = null;
-    if (request.getMethod().equals("POST") && is_admin && (con != null)) {
+    if (request.getMethod().equals("POST") && is_admin) {
 	String cancel_group = request.getParameter("cancel_group_id");
 	String cancel_date = request.getParameter("cancel_date");
 	String cancel_reason = request.getParameter("cancel_reason");
@@ -45,7 +46,7 @@
 
     /* Next two weeks of classes, per the "View schedule" functional requirement */
     java.util.List<java.util.Map<String,Object>> classes = new java.util.ArrayList<>();
-    if (can_view_schedule && (con != null)) {
+    if (can_view_schedule) {
 	StringBuilder sql = new StringBuilder();
 	sql.append("SELECT cs.group_id, cs.`date` AS class_date, cs.`time` AS class_time, g.duration, ");
 	sql.append("(SELECT sp.sport_name FROM sport_groups sg JOIN sports sp ON sp.sport_id = sg.sport_id ");
@@ -189,7 +190,7 @@
 	<% } %>
     </main>
     <%
-    if (con != null) con.close();
+    try { con.close(); } catch (SQLException ignore) {}
     %>
 </body>
 </html>

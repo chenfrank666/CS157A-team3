@@ -1,8 +1,9 @@
 <%@ page import="java.sql.*, javax.naming.*, javax.sql.DataSource" %>
 <%@ include file="/WEB-INF/includes/auth-check.jspf" %>
 <%
-    if (auth_admin_flag != 1) {
+    if ((auth_admin_flag != 1) || (con == null)) {
         response.sendRedirect("/tomcat-app/gym-management/");
+	if (con != null) try { con.close(); } catch (SQLException ignore) {}
         return;
     }
 
@@ -16,7 +17,7 @@
 </head>
 <body>
     <%@ include file="/WEB-INF/includes/navbar.jspf" %>
-    <% if (request.getMethod().equals("POST") && (con != null)) {
+    <% if (request.getMethod().equals("POST")) {
 	int err = 1;
 	String username = request.getParameter("username");
 	String password1 = request.getParameter("password1");
@@ -39,8 +40,7 @@
 		int new_user_id = 0;
 		if (getid_res.next()) {
 		    new_user_id = getid_res.getInt(1) + 1;
-		    getid_res.close();
-		    
+
 		    String insert_user_sql =
 		    "INSERT INTO users (user_name, user_password, user_id, "
 		    + "user_type, "
@@ -101,9 +101,10 @@
 		    con.commit();
 		    err = 0;
 		} else {
-	            getid_stmt.close();
 		    con.rollback();
 		}
+		getid_res.close();
+		getid_stmt.close();
 	    } catch (SQLException e) {
     %>
 	<div class="card container-input">
@@ -211,6 +212,8 @@
 	<button type="submit" class="btn" style="width: 100%;">Add</button>
     </form>
     </div>
-    <% } %>
+    <% }
+    try { con.close(); } catch (SQLException ignore) {}
+    %>
 </body>
 </html>

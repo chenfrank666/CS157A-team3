@@ -13,8 +13,9 @@
 <%
     boolean is_coach = (auth_user_type == 0) && (auth_coach_flag == 1);
     boolean is_admin = (auth_user_type == 0) && (auth_admin_flag == 1);
-    if (!is_coach && !is_admin) {
+    if (!is_coach && !is_admin || (con == null)) {
 	response.sendRedirect("/tomcat-app/gym-management/");
+	if (con != null) try { con.close(); } catch (SQLException ignore) {}
 	return;
     }
 
@@ -25,7 +26,7 @@
        group's session, or step down from one, per the "Coach schedule
        change" functional requirement. */
     if (request.getMethod().equals("POST") && "submit".equals(request.getParameter("form_action"))
-	    && is_coach && (con != null)) {
+	    && is_coach) {
 	try {
 	    int req_type = Integer.parseInt(request.getParameter("request_type"));
 	    int group_id = Integer.parseInt(request.getParameter("group_id"));
@@ -86,7 +87,7 @@
 
     /* Coach: withdraw one of their own still-pending requests. */
     if (request.getMethod().equals("POST") && "withdraw".equals(request.getParameter("form_action"))
-	    && is_coach && (con != null)) {
+	    && is_coach) {
 	try {
 	    int request_id = Integer.parseInt(request.getParameter("request_id"));
 	    PreparedStatement owns_stmt = con.prepareStatement(
@@ -119,7 +120,7 @@
        underlying schedule change and archives (removes) the request. */
     if (request.getMethod().equals("POST")
 	    && ("approve".equals(request.getParameter("form_action")) || "reject".equals(request.getParameter("form_action")))
-	    && is_admin && (con != null)) {
+	    && is_admin) {
 	boolean approve = "approve".equals(request.getParameter("form_action"));
 	try {
 	    int request_id = Integer.parseInt(request.getParameter("request_id"));
@@ -219,7 +220,7 @@
 
     /* Active groups, for the coach's "submit a request" group picker. */
     java.util.List<java.util.Map<String,Object>> active_groups = new java.util.ArrayList<>();
-    if (is_coach && (con != null)) {
+    if (is_coach) {
 	String groups_sql =
 	    "SELECT g.group_id, sp.sport_name "
 	    + "FROM `groups` g "
@@ -244,7 +245,7 @@
 
     /* This coach's own pending requests. */
     java.util.List<java.util.Map<String,Object>> my_requests = new java.util.ArrayList<>();
-    if (is_coach && (con != null)) {
+    if (is_coach) {
 	String sql =
 	    "SELECT r.request_id, r.request_type, r.request_text, r.request_date, r.target_date, "
 	    + "rg.group_id, sp.sport_name "
@@ -278,7 +279,7 @@
 
     /* Full pending queue, for administrators to approve or reject. */
     java.util.List<java.util.Map<String,Object>> pending_queue = new java.util.ArrayList<>();
-    if (is_admin && (con != null)) {
+    if (is_admin) {
 	String sql =
 	    "SELECT r.request_id, r.request_type, r.request_text, r.request_date, r.target_date, "
 	    + "rg.group_id, sp.sport_name, u.first_name, u.last_name "
@@ -467,8 +468,8 @@
 	<% } %>
 
     </main>
-    <%
-    if (con != null) con.close();
-    %>
+<%
+try { con.close(); } catch (SQLException ignore) {}
+%>
 </body>
 </html>

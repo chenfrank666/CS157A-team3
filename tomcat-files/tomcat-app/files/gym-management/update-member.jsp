@@ -1,9 +1,10 @@
 <%@ page import="java.sql.*, javax.naming.*, javax.sql.DataSource" %>
 <%@ include file="/WEB-INF/includes/auth-check.jspf" %>
 <%
-    if (auth_admin_flag != 1) {
-	response.sendRedirect("/tomcat-app/gym-management/");
-	return;
+    if ((auth_admin_flag != 1) || (con == null)) {
+        response.sendRedirect("/tomcat-app/gym-management/");
+	if (con != null) try { con.close(); } catch (SQLException ignore) {}
+        return;
     }
 
     String active_page = "update-member";
@@ -12,11 +13,13 @@
     try {
 	if ((update_user_id_str == null) || update_user_id_str.equals("")) {
 	    response.sendRedirect("users.jsp");
+	    try { con.close(); } catch (SQLException ignore) {}
 	    return;
 	}
 	update_user_id=Integer.parseInt(update_user_id_str);
     } catch (Exception e) {
 	response.sendRedirect("users.jsp");
+	try { con.close(); } catch (SQLException ignore) {}
 	return;
     }
 %>
@@ -28,7 +31,7 @@
 </head>
 <body>
     <%@ include file="/WEB-INF/includes/navbar.jspf" %>
-    <% if (request.getMethod().equals("POST") && (con != null)) {
+    <% if (request.getMethod().equals("POST")) {
 	int err = 1;
 	String username = request.getParameter("username");
 	String password1 = request.getParameter("password1");
@@ -159,15 +162,16 @@
 	}
 	con.setAutoCommit(true);
     } else {
-	String memQuery = "SELECT u.user_id, u.first_name, u.last_name, "
-	+ "u.user_name, u.active_flag, e.goals, e.health_notes "
-	+ "FROM users u JOIN members e ON u.user_id = e.user_id "
-	+ "WHERE u.user_id = ? AND u.user_type = 1";
-	PreparedStatement memStmt = con.prepareStatement(memQuery);
-	memStmt.setInt(1, update_user_id);
-        ResultSet memRs = memStmt.executeQuery();
+	try {
+	    String memQuery = "SELECT u.user_id, u.first_name, u.last_name, "
+	    + "u.user_name, u.active_flag, e.goals, e.health_notes "
+	    + "FROM users u JOIN members e ON u.user_id = e.user_id "
+	    + "WHERE u.user_id = ? AND u.user_type = 1";
+	    PreparedStatement memStmt = con.prepareStatement(memQuery);
+	    memStmt.setInt(1, update_user_id);
+            ResultSet memRs = memStmt.executeQuery();
 
-        if(memRs.next()) {
+            if(memRs.next()) {
     %>
     <div class="card container-input">
 	<form action="update-member.jsp" method="post">
@@ -205,18 +209,26 @@
 	<button type="submit" class="btn" style="width: 100%;">Update</button>
 	</form>
     </div>
-    <%  } else { %>
+    <%	    } else { %>
 	<div class="card container-input">
 	    <div class="form-row">
 		No such user
 	    </div>
-	</div> 
+	</div>
+	<%
+	    }
+	    memRs.close();
+	    memStmt.close();
+	} catch (SQLException e) { %>
+	<div class="card container-input">
+	    <div class="form-row">
+		Users database is not accessible
+	    </div>
+	</div>
 	<%
 	}
-	memRs.close();
-	memStmt.close();
     }
-con.close();
+try { con.close(); } catch (SQLException ignore) {}
 %>
 </body>
 </html>

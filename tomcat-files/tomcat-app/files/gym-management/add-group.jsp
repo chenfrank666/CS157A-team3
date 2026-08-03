@@ -2,8 +2,9 @@
 <%@ include file="/WEB-INF/includes/auth-check.jspf" %>
 <%
     // Only administrators can access this page
-    if (auth_admin_flag != 1) {
+    if ((auth_admin_flag != 1) || (con == null)) {
         response.sendRedirect("/tomcat-app/gym-management/");
+	if (con != null) try { con.close(); } catch (SQLException ignore) {}
         return;
     }
 
@@ -11,13 +12,7 @@
     String success_message = null;
     String error_message = null;
 
-    Connection conn = null;
     try {
-        Context initContext = new InitialContext();
-        Context envContext = (Context) initContext.lookup("java:/comp/env");
-        DataSource ds = (DataSource) envContext.lookup("jdbc/GymDB");
-        conn = ds.getConnection();
-
         if (request.getMethod().equals("POST")) {
             String sport_id = request.getParameter("sport_id");
             String location_id = request.getParameter("location_id");
@@ -33,13 +28,13 @@
             }
 
             if (sport_id != null && location_id != null && start_date != null && duration != null) {
-                conn.setAutoCommit(false);
+                con.setAutoCommit(false);
                 try {
                     String insertGroupSQL = "INSERT INTO `groups` (active_flag, start_date, end_date, duration, "
                             + "Monday_time, Tuesday_time, Wednesday_time, Thursday_time, Friday_time, Saturday_time, Sunday_time) "
                             + "VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-                    PreparedStatement groupStmt = conn.prepareStatement(insertGroupSQL, Statement.RETURN_GENERATED_KEYS);
+                    PreparedStatement groupStmt = con.prepareStatement(insertGroupSQL, Statement.RETURN_GENERATED_KEYS);
                     groupStmt.setDate(1, java.sql.Date.valueOf(start_date));
                     
                     if (end_date != null && !end_date.trim().isEmpty()) {
@@ -70,30 +65,30 @@
 
                     if (new_group_id != -1) {
                         // Map to sport_groups
-                        PreparedStatement sportStmt = conn.prepareStatement("INSERT INTO sport_groups (group_id, sport_id) VALUES (?, ?)");
+                        PreparedStatement sportStmt = con.prepareStatement("INSERT INTO sport_groups (group_id, sport_id) VALUES (?, ?)");
                         sportStmt.setInt(1, new_group_id);
                         sportStmt.setInt(2, Integer.parseInt(sport_id));
                         sportStmt.executeUpdate();
                         sportStmt.close();
 
                         // Map to location_groups
-                        PreparedStatement locStmt = conn.prepareStatement("INSERT INTO location_groups (group_id, location_id) VALUES (?, ?)");
+                        PreparedStatement locStmt = con.prepareStatement("INSERT INTO location_groups (group_id, location_id) VALUES (?, ?)");
                         locStmt.setInt(1, new_group_id);
                         locStmt.setInt(2, Integer.parseInt(location_id));
                         locStmt.executeUpdate();
                         locStmt.close();
 
-                        conn.commit();
+                        con.commit();
                         success_message = "New training group created successfully!";
                     } else {
-                        conn.rollback();
+                        con.rollback();
                         error_message = "Failed to retrieve the new group ID.";
                     }
                 } catch (SQLException e) {
-                    conn.rollback();
+                    con.rollback();
                     error_message = "Database error: " + e.getMessage();
                 } finally {
-                    conn.setAutoCommit(true);
+                    con.setAutoCommit(true);
                 }
             } else {
                 error_message = "Please fill in all required fields.";
@@ -130,7 +125,7 @@
                     <select id="sport_id" name="sport_id" required style="width: 100%; padding: 8px;">
                         <option value="">-- Select Sport --</option>
                         <%
-                            Statement sStmt = conn.createStatement();
+                            Statement sStmt = con.createStatement();
                             ResultSet sRs = sStmt.executeQuery("SELECT sport_id, sport_name FROM sports ORDER BY sport_name");
                             while(sRs.next()) {
                         %>
@@ -144,7 +139,7 @@
                     <select id="location_id" name="location_id" required style="width: 100%; padding: 8px;">
                         <option value="">-- Select Location --</option>
                         <%
-                            Statement lStmt = conn.createStatement();
+                            Statement lStmt = con.createStatement();
                             ResultSet lRs = lStmt.executeQuery("SELECT location_id, location_name FROM locations ORDER BY location_name");
                             while(lRs.next()) {
                         %>
@@ -188,7 +183,7 @@
     } catch (Exception e) {
         out.println("<p>System error: " + e.getMessage() + "</p>");
     } finally {
-        if (conn != null) try { conn.close(); } catch (SQLException ignore) {}
+        try { con.close(); } catch (SQLException ignore) {}
     }
 %>
 </body>

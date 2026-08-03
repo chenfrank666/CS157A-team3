@@ -1,9 +1,10 @@
 <%@ page import="java.sql.*, javax.naming.*, javax.sql.DataSource" %>
 <%@ include file="/WEB-INF/includes/auth-check.jspf" %>
 <%
-    if (auth_admin_flag != 1) {
-	response.sendRedirect("/tomcat-app/gym-management/");
-	return;
+    if ((auth_admin_flag != 1) || (con == null)) {
+        response.sendRedirect("/tomcat-app/gym-management/");
+	if (con != null) try { con.close(); } catch (SQLException ignore) {}
+        return;
     }
 
     String active_page = "update-employee";
@@ -12,11 +13,13 @@
     try {
 	if ((update_user_id_str == null) || update_user_id_str.equals("")) {
 	    response.sendRedirect("users.jsp");
+	    try { con.close(); } catch (SQLException ignore) {}
 	    return;
 	}
 	update_user_id=Integer.parseInt(update_user_id_str);
     } catch (Exception e) {
 	response.sendRedirect("users.jsp");
+	try { con.close(); } catch (SQLException ignore) {}
 	return;
     }
 %>
@@ -28,7 +31,7 @@
 </head>
 <body>
     <%@ include file="/WEB-INF/includes/navbar.jspf" %>
-    <% if (request.getMethod().equals("POST") && (con != null)) {
+    <% if (request.getMethod().equals("POST")) {
 	int err = 1;
 	String username = request.getParameter("username");
 	String password1 = request.getParameter("password1");
@@ -147,15 +150,16 @@
 	}
 	con.setAutoCommit(true);
     } else {
-	String empQuery = "SELECT u.user_id, u.first_name, u.last_name, "
-	+ "u.user_name, u.active_flag, e.coach_flag, e.admin_flag "
-	+ "FROM users u JOIN employees e ON u.user_id = e.user_id "
-	+ "WHERE u.user_id = ? AND u.user_type = 0";
-	PreparedStatement empStmt = con.prepareStatement(empQuery);
-	empStmt.setInt(1, update_user_id);
-        ResultSet empRs = empStmt.executeQuery();
+	try {
+	    String empQuery = "SELECT u.user_id, u.first_name, u.last_name, "
+	    + "u.user_name, u.active_flag, e.coach_flag, e.admin_flag "
+	    + "FROM users u JOIN employees e ON u.user_id = e.user_id "
+	    + "WHERE u.user_id = ? AND u.user_type = 0";
+	    PreparedStatement empStmt = con.prepareStatement(empQuery);
+	    empStmt.setInt(1, update_user_id);
+            ResultSet empRs = empStmt.executeQuery();
 
-        if(empRs.next()) {
+            if(empRs.next()) {
     %>
     <div class="card container-input">
 	<form action="update-employee.jsp" method="post">
@@ -189,18 +193,26 @@
 	<button type="submit" class="btn" style="width: 100%;">Update</button>
 	</form>
     </div>
-    <%  } else { %>
+    <%      } else { %>
 	<div class="card container-input">
 	    <div class="form-row">
 		No such user
 	    </div>
-	</div> 
+	</div>
+	<%
+	    }
+	    empRs.close();
+	    empStmt.close();
+	} catch (SQLException e) { %>
+	<div class="card container-input">
+	    <div class="form-row">
+		Users database is not accessible
+	    </div>
+	</div>
 	<%
 	}
-	empRs.close();
-	empStmt.close();
     }
-con.close();
+try { con.close(); } catch (SQLException ignore) {}
 %>
 </body>
 </html>
