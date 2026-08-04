@@ -57,8 +57,7 @@
     java.util.List<java.util.Map<String,Object>> groups = new java.util.ArrayList<>();
     if (con != null) {
 	try {
-	    /* Base group info, with a plain JOIN (not a subquery) to pick up each
-	       group's sport. */
+	    
 	    String groups_sql =
 "SELECT g.group_id, g.duration, "
 + "g.Monday_time, g.Tuesday_time, g.Wednesday_time, g.Thursday_time, "
@@ -92,7 +91,6 @@
 	    groups_rs.close();
 	    groups_stmt.close();
 
-	    /* Locations per group: one simple SELECT, joined in Java instead of GROUP_CONCAT. */
 	    java.util.Map<Integer,java.util.List<String>> locations_by_group = new java.util.HashMap<>();
 	    String locations_sql =
 "SELECT lg.group_id, loc.location_name "
@@ -109,7 +107,6 @@
 	    locations_rs.close();
 	    locations_stmt.close();
 
-	    /* Enrollment counts per group: plain GROUP BY, no correlated subquery. */
 	    java.util.Map<Integer,Integer> enrolled_by_group = new java.util.HashMap<>();
 	    String counts_sql =
 "SELECT group_id, COUNT(*) AS enrolled FROM group_membership GROUP BY group_id";
@@ -121,8 +118,7 @@
 	    counts_rs.close();
 	    counts_stmt.close();
 
-	    /* Groups the current member already belongs to, so "is_member" is a
-	       plain lookup instead of an EXISTS(...) subquery. */
+
 	    java.util.Set<Integer> my_group_ids = new java.util.HashSet<>();
 	    if (is_member) {
 		PreparedStatement my_groups_stmt = con.prepareStatement(
