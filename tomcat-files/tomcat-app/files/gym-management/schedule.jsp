@@ -28,15 +28,37 @@
 	String cancel_reason = request.getParameter("cancel_reason");
 	if ((cancel_group != null) && (cancel_date != null)) {
 	    try {
-		PreparedStatement cancel_stmt = con.prepareStatement(
-"INSERT INTO cancellations (group_id, `date`, reason) VALUES (?, ?, ?) "
-+ "ON DUPLICATE KEY UPDATE reason = VALUES(reason)");
-		cancel_stmt.setInt(1, Integer.parseInt(cancel_group));
-		cancel_stmt.setDate(2, java.sql.Date.valueOf(cancel_date));
-		cancel_stmt.setString(3, ((cancel_reason == null) || cancel_reason.trim().isEmpty())
-		    ? "Cancelled by administrator" : cancel_reason.trim());
-		cancel_stmt.executeUpdate();
-		cancel_stmt.close();
+		int cancel_group_id = Integer.parseInt(cancel_group);
+		java.sql.Date cancel_sql_date = java.sql.Date.valueOf(cancel_date);
+		String reason_text = ((cancel_reason == null) || cancel_reason.trim().isEmpty())
+		    ? "Cancelled by administrator" : cancel_reason.trim();
+
+		PreparedStatement exists_stmt = con.prepareStatement(
+"SELECT reason FROM cancellations WHERE group_id = ? AND `date` = ?");
+		exists_stmt.setInt(1, cancel_group_id);
+		exists_stmt.setDate(2, cancel_sql_date);
+		ResultSet exists_rs = exists_stmt.executeQuery();
+		boolean already_cancelled = exists_rs.next();
+		exists_rs.close();
+		exists_stmt.close();
+
+		if (already_cancelled) {
+		    PreparedStatement update_stmt = con.prepareStatement(
+"UPDATE cancellations SET reason = ? WHERE group_id = ? AND `date` = ?");
+		    update_stmt.setString(1, reason_text);
+		    update_stmt.setInt(2, cancel_group_id);
+		    update_stmt.setDate(3, cancel_sql_date);
+		    update_stmt.executeUpdate();
+		    update_stmt.close();
+		} else {
+		    PreparedStatement insert_stmt = con.prepareStatement(
+"INSERT INTO cancellations (group_id, `date`, reason) VALUES (?, ?, ?)");
+		    insert_stmt.setInt(1, cancel_group_id);
+		    insert_stmt.setDate(2, cancel_sql_date);
+		    insert_stmt.setString(3, reason_text);
+		    insert_stmt.executeUpdate();
+		    insert_stmt.close();
+		}
 		cancel_message = "The class on " + cancel_date + " has been cancelled.";
 	    } catch(Exception e) {
 		cancel_message = "Unable to cancel that class.";
@@ -47,47 +69,152 @@
     /* Next two weeks of classes, per the "View schedule" functional requirement */
     java.util.List<java.util.Map<String,Object>> classes = new java.util.ArrayList<>();
     if (can_view_schedule) {
-	StringBuilder sql = new StringBuilder();
-	sql.append("SELECT cs.group_id, cs.`date` AS class_date, cs.`time` AS class_time, g.duration, ");
-	sql.append("(SELECT sp.sport_name FROM sport_groups sg JOIN sports sp ON sp.sport_id = sg.sport_id ");
-	sql.append(" WHERE sg.group_id = g.group_id LIMIT 1) AS sport_name, ");
-	sql.append("(SELECT GROUP_CONCAT(loc.location_name SEPARATOR ', ') FROM location_groups lg ");
-	sql.append(" JOIN locations loc ON loc.location_id = lg.location_id WHERE lg.group_id = g.group_id) AS location_names, ");
-	sql.append("(SELECT CONCAT(u.first_name, ' ', u.last_name) FROM class_coach cc ");
-	sql.append(" JOIN users u ON u.user_id = cc.user_id ");
-	sql.append(" WHERE cc.group_id = cs.group_id AND cc.`date` = cs.`date` LIMIT 1) AS coach_name, ");
-	sql.append("(SELECT COUNT(*) FROM group_membership gm WHERE gm.group_id = cs.group_id) AS enrolled, ");
-	sql.append("(SELECT reason FROM cancellations c WHERE c.group_id = cs.group_id AND c.`date` = cs.`date`) AS cancel_reason ");
-	sql.append("FROM class_schedule cs JOIN `groups` g ON g.group_id = cs.group_id ");
-	sql.append("WHERE cs.`date` BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 14 DAY) ");
-	if (show_mine && is_member) {
-	    sql.append("AND EXISTS (SELECT 1 FROM group_membership gm2 WHERE gm2.group_id = cs.group_id AND gm2.member_id = ?) ");
-	} else if (show_mine && is_coach) {
-	    sql.append("AND EXISTS (SELECT 1 FROM class_coach cc2 WHERE cc2.group_id = cs.group_id ");
-	    sql.append(" AND cc2.`date` = cs.`date` AND cc2.user_id = ?) ");
-	}
-	sql.append("ORDER BY cs.`date`, cs.`time`");
 	try {
-	    PreparedStatement stmt = con.prepareStatement(sql.toString());
-	    if (show_mine && (is_member || is_coach)) {
-		stmt.setInt(1, auth_user_id);
-	    }
-	    ResultSet rs = stmt.executeQuery();
-	    while (rs.next()) {
+	    java.sql.Date window_start = new java.sql.Date(System.currentTimeMillis());
+	    java.sql.Date window_end = new java.sql.Date(
+		System.currentTimeMillis() + 14L * 24 * 60 * 60 * 1000);
+
+	    String classes_sql =
+"SELECT cs.group_id, cs.`date` AS class_date, cs.`time` AS class_time, g.duration, sp.sport_name "
++ "FROM class_schedule cs "
++ "JOIN `groups` g ON g.group_id = cs.group_id "
++ "LEFT JOIN sport_groups sg ON sg.group_id = g.group_id "
++ "LEFT JOIN sports sp ON sp.sport_id = sg.sport_id "
++ "WHERE cs.`date` >= ? AND cs.`date` <= ? "
++ "ORDER BY cs.`date`, cs.`time`";
+	    PreparedStatement classes_stmt = con.prepareStatement(classes_sql);
+	    classes_stmt.setDate(1, window_start);
+	    classes_stmt.setDate(2, window_end);
+	    ResultSet classes_rs = classes_stmt.executeQuery();
+	    while (classes_rs.next()) {
 		java.util.Map<String,Object> row = new java.util.HashMap<>();
-		row.put("group_id", rs.getInt("group_id"));
-		row.put("date", rs.getDate("class_date"));
-		row.put("time", rs.getTime("class_time"));
-		row.put("duration", rs.getInt("duration"));
-		row.put("sport_name", rs.getString("sport_name"));
-		row.put("location_names", rs.getString("location_names"));
-		row.put("coach_name", rs.getString("coach_name"));
-		row.put("enrolled", rs.getInt("enrolled"));
-		row.put("cancel_reason", rs.getString("cancel_reason"));
+		row.put("group_id", classes_rs.getInt("group_id"));
+		row.put("date", classes_rs.getDate("class_date"));
+		row.put("time", classes_rs.getTime("class_time"));
+		row.put("duration", classes_rs.getInt("duration"));
+		row.put("sport_name", classes_rs.getString("sport_name"));
+		row.put("location_names", null);
+		row.put("coach_name", null);
+		row.put("enrolled", 0);
+		row.put("cancel_reason", null);
 		classes.add(row);
 	    }
-	    rs.close();
-	    stmt.close();
+	    classes_rs.close();
+	    classes_stmt.close();
+
+	    
+	    java.util.Map<Integer,java.util.List<String>> locations_by_group = new java.util.HashMap<>();
+	    String locations_sql =
+"SELECT lg.group_id, loc.location_name "
++ "FROM location_groups lg "
++ "JOIN locations loc ON loc.location_id = lg.location_id "
++ "ORDER BY lg.group_id, loc.location_name";
+	    Statement locations_stmt = con.createStatement();
+	    ResultSet locations_rs = locations_stmt.executeQuery(locations_sql);
+	    while (locations_rs.next()) {
+		int loc_group_id = locations_rs.getInt("group_id");
+		locations_by_group.computeIfAbsent(loc_group_id, k -> new java.util.ArrayList<>())
+		    .add(locations_rs.getString("location_name"));
+	    }
+	    locations_rs.close();
+	    locations_stmt.close();
+
+	    java.util.Map<String,String> coach_by_key = new java.util.HashMap<>();
+	    String coach_sql =
+"SELECT cc.group_id, cc.`date`, u.first_name, u.last_name "
++ "FROM class_coach cc "
++ "JOIN users u ON u.user_id = cc.user_id "
++ "WHERE cc.`date` >= ? AND cc.`date` <= ?";
+	    PreparedStatement coach_stmt = con.prepareStatement(coach_sql);
+	    coach_stmt.setDate(1, window_start);
+	    coach_stmt.setDate(2, window_end);
+	    ResultSet coach_rs = coach_stmt.executeQuery();
+	    while (coach_rs.next()) {
+		String coach_key = coach_rs.getInt("group_id") + "|" + coach_rs.getDate("date");
+		if (!coach_by_key.containsKey(coach_key)) {
+		    coach_by_key.put(coach_key, coach_rs.getString("first_name") + " " + coach_rs.getString("last_name"));
+		}
+	    }
+	    coach_rs.close();
+	    coach_stmt.close();
+
+	    java.util.Map<Integer,Integer> enrolled_by_group = new java.util.HashMap<>();
+	    String counts_sql = "SELECT group_id, COUNT(*) AS enrolled FROM group_membership GROUP BY group_id";
+	    Statement counts_stmt = con.createStatement();
+	    ResultSet counts_rs = counts_stmt.executeQuery(counts_sql);
+	    while (counts_rs.next()) {
+		enrolled_by_group.put(counts_rs.getInt("group_id"), counts_rs.getInt("enrolled"));
+	    }
+	    counts_rs.close();
+	    counts_stmt.close();
+
+	    java.util.Map<String,String> cancel_by_key = new java.util.HashMap<>();
+	    String cancel_lookup_sql =
+"SELECT group_id, `date`, reason FROM cancellations WHERE `date` >= ? AND `date` <= ?";
+	    PreparedStatement cancel_lookup_stmt = con.prepareStatement(cancel_lookup_sql);
+	    cancel_lookup_stmt.setDate(1, window_start);
+	    cancel_lookup_stmt.setDate(2, window_end);
+	    ResultSet cancel_lookup_rs = cancel_lookup_stmt.executeQuery();
+	    while (cancel_lookup_rs.next()) {
+		String cancel_key = cancel_lookup_rs.getInt("group_id") + "|" + cancel_lookup_rs.getDate("date");
+		cancel_by_key.put(cancel_key, cancel_lookup_rs.getString("reason"));
+	    }
+	    cancel_lookup_rs.close();
+	    cancel_lookup_stmt.close();
+
+	    java.util.Set<Integer> my_group_ids = new java.util.HashSet<>();
+	    if (show_mine && is_member) {
+		PreparedStatement my_groups_stmt = con.prepareStatement(
+"SELECT group_id FROM group_membership WHERE member_id = ?");
+		my_groups_stmt.setInt(1, auth_user_id);
+		ResultSet my_groups_rs = my_groups_stmt.executeQuery();
+		while (my_groups_rs.next()) {
+		    my_group_ids.add(my_groups_rs.getInt("group_id"));
+		}
+		my_groups_rs.close();
+		my_groups_stmt.close();
+	    }
+
+	    /* This coach's own class_coach assignments in the window, same idea. */
+	    java.util.Set<String> my_coach_keys = new java.util.HashSet<>();
+	    if (show_mine && is_coach) {
+		PreparedStatement my_coach_stmt = con.prepareStatement(
+"SELECT group_id, `date` FROM class_coach WHERE user_id = ? AND `date` >= ? AND `date` <= ?");
+		my_coach_stmt.setInt(1, auth_user_id);
+		my_coach_stmt.setDate(2, window_start);
+		my_coach_stmt.setDate(3, window_end);
+		ResultSet my_coach_rs = my_coach_stmt.executeQuery();
+		while (my_coach_rs.next()) {
+		    my_coach_keys.add(my_coach_rs.getInt("group_id") + "|" + my_coach_rs.getDate("date"));
+		}
+		my_coach_rs.close();
+		my_coach_stmt.close();
+	    }
+
+	    java.util.List<java.util.Map<String,Object>> filtered_classes = new java.util.ArrayList<>();
+	    for (java.util.Map<String,Object> row : classes) {
+		int row_group_id = (Integer) row.get("group_id");
+		java.sql.Date row_date = (java.sql.Date) row.get("date");
+		String row_key = row_group_id + "|" + row_date;
+
+		java.util.List<String> row_locations = locations_by_group.get(row_group_id);
+		if (row_locations != null) {
+		    StringBuilder joined = new StringBuilder();
+		    for (int i = 0; i < row_locations.size(); i++) {
+			if (i > 0) joined.append(", ");
+			joined.append(row_locations.get(i));
+		    }
+		    row.put("location_names", joined.toString());
+		}
+		row.put("coach_name", coach_by_key.get(row_key));
+		row.put("enrolled", enrolled_by_group.getOrDefault(row_group_id, 0));
+		row.put("cancel_reason", cancel_by_key.get(row_key));
+
+		if (show_mine && is_member && !my_group_ids.contains(row_group_id)) continue;
+		if (show_mine && is_coach && !my_coach_keys.contains(row_key)) continue;
+		filtered_classes.add(row);
+	    }
+	    classes = filtered_classes;
 	} catch(SQLException e) {
 	}
     }

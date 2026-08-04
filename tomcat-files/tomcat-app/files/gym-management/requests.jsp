@@ -40,21 +40,25 @@
 	    } else {
 		con.setAutoCommit(false);
 		try {
+		    String getid_sql = "SELECT MAX(request_id) FROM requests";
+		    Statement getid_stmt = con.createStatement();
+		    ResultSet getid_rs = getid_stmt.executeQuery(getid_sql);
+		    int new_request_id = 1;
+		    if (getid_rs.next()) {
+			new_request_id = getid_rs.getInt(1) + 1;
+		    }
+		    getid_rs.close();
+		    getid_stmt.close();
+
 		    PreparedStatement ins_req = con.prepareStatement(
-			"INSERT INTO requests (request_type, request_text, request_date, target_date) "
-			+ "VALUES (?, ?, CURDATE(), ?)");
-		    ins_req.setInt(1, req_type);
-		    ins_req.setString(2, reason);
-		    ins_req.setDate(3, target_date);
+			"INSERT INTO requests (request_id, request_type, request_text, request_date, target_date) "
+			+ "VALUES (?, ?, ?, CURDATE(), ?)");
+		    ins_req.setInt(1, new_request_id);
+		    ins_req.setInt(2, req_type);
+		    ins_req.setString(3, reason);
+		    ins_req.setDate(4, target_date);
 		    ins_req.executeUpdate();
 		    ins_req.close();
-
-		    Statement id_stmt = con.createStatement();
-		    ResultSet id_rs = id_stmt.executeQuery("SELECT LAST_INSERT_ID()");
-		    id_rs.next();
-		    int new_request_id = id_rs.getInt(1);
-		    id_rs.close();
-		    id_stmt.close();
 
 		    PreparedStatement ins_emp = con.prepareStatement(
 			"INSERT INTO request_employee (request_id, user_id) VALUES (?, ?)");
@@ -149,15 +153,34 @@
 		    con.setAutoCommit(false);
 		    try {
 			if (req_type == 0) {
-			    PreparedStatement cancel_stmt = con.prepareStatement(
-				"INSERT INTO cancellations (group_id, `date`, reason) VALUES (?, ?, ?) "
-				+ "ON DUPLICATE KEY UPDATE reason = VALUES(reason)");
-			    cancel_stmt.setInt(1, group_id);
-			    cancel_stmt.setDate(2, target_date);
-			    cancel_stmt.setString(3, (reason == null) ? "Cancelled per coach request" : reason);
-			    cancel_stmt.executeUpdate();
-			    cancel_stmt.close();
-			} else if (req_type == 1) {
+			    String cancel_reason_text = (reason == null) ? "Cancelled per coach request" : reason;
+			    PreparedStatement cancel_check = con.prepareStatement(
+"SELECT reason FROM cancellations WHERE group_id = ? AND `date` = ?");
+			    cancel_check.setInt(1, group_id);
+			    cancel_check.setDate(2, target_date);
+			    ResultSet cancel_check_rs = cancel_check.executeQuery();
+			    boolean already_cancelled = cancel_check_rs.next();
+			    cancel_check_rs.close();
+			    cancel_check.close();
+
+			    if (already_cancelled) {
+				PreparedStatement cancel_update = con.prepareStatement(
+"UPDATE cancellations SET reason = ? WHERE group_id = ? AND `date` = ?");
+				cancel_update.setString(1, cancel_reason_text);
+				cancel_update.setInt(2, group_id);
+				cancel_update.setDate(3, target_date);
+				cancel_update.executeUpdate();
+				cancel_update.close();
+			    } else {
+				PreparedStatement cancel_insert = con.prepareStatement(
+"INSERT INTO cancellations (group_id, `date`, reason) VALUES (?, ?, ?)");
+				cancel_insert.setInt(1, group_id);
+				cancel_insert.setDate(2, target_date);
+				cancel_insert.setString(3, cancel_reason_text);
+				cancel_insert.executeUpdate();
+				cancel_insert.close();
+			    }
+			} else if (req_type == 1) {} else if (req_type == 1) {
 			    PreparedStatement sched_check = con.prepareStatement(
 				"SELECT `time` FROM class_schedule WHERE group_id = ? AND `date` = ?");
 			    sched_check.setInt(1, group_id);
