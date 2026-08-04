@@ -180,7 +180,7 @@
 				cancel_insert.executeUpdate();
 				cancel_insert.close();
 			    }
-			} else if (req_type == 1) {} else if (req_type == 1) {
+			} else if (req_type == 1) {
 			    PreparedStatement sched_check = con.prepareStatement(
 				"SELECT `time` FROM class_schedule WHERE group_id = ? AND `date` = ?");
 			    sched_check.setInt(1, group_id);
