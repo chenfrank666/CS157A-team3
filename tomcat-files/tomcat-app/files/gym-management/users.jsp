@@ -29,6 +29,14 @@
 	try { con.close(); } catch (SQLException ignore) {}
         return;
     }
+
+    // Read search parameter from request and format SQL search pattern
+
+    String searchQuery = request.getParameter("search");
+    if (searchQuery == null) {
+        searchQuery = "";
+    }
+    String searchPattern = "%" + searchQuery.trim().toLowerCase() + "%";
 %>
 <!DOCTYPE html>
 <html>
@@ -48,7 +56,14 @@
                     <h1>System Users Roster</h1>
                     <p class="subtitle">Search and filter active/inactive employees and members registered in the system.</p>
                     <div style="margin-top: 16px;">
-                        <input type="text" id="userSearchInput" onkeyup="filterUsers()" placeholder="Search by name, username, ID, or goals..." style="width: 100%; padding: 12px; font-size: 0.95rem; border: 1px solid var(--color-border); border-radius: 8px;">
+                        <form action="users.jsp" method="get" style="display: flex; gap: 8px;">
+                            <input type="text" name="search" value="<%= searchQuery %>" placeholder="Search by name, username, ID, or goals..." style="flex: 1; padding: 12px; font-size: 0.95rem; border: 1px solid var(--color-border); border-radius: 8px;">
+                            <button type="submit" class="btn">Search</button>
+                            <!-- [ADDED] Clear button when a search filter is active -->
+                            <% if (!searchQuery.isEmpty()) { %>
+                                <a href="users.jsp" class="btn btn-secondary" style="text-decoration: none; line-height: 2.2rem;">Clear</a>
+                            <% } %>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -88,8 +103,19 @@
                     <tbody>
                         <%
                             String empQuery = "SELECT u.user_id, u.first_name, u.last_name, u.user_name, u.active_flag, e.coach_flag, e.admin_flag " +
-                                              "FROM users u JOIN employees e ON u.user_id = e.user_id WHERE u.user_type = 0";
+                                              "FROM users u JOIN employees e ON u.user_id = e.user_id WHERE u.user_type = 0 AND (" +
+                                              "CAST(u.user_id AS CHAR) LIKE ? OR " +
+                                              "LOWER(u.first_name) LIKE ? OR " +
+                                              "LOWER(u.last_name) LIKE ? OR " +
+                                              "LOWER(CONCAT(u.first_name, ' ', u.last_name)) LIKE ? OR " +
+                                              "LOWER(u.user_name) LIKE ?)";
                             empStmt = con.prepareStatement(empQuery);
+                            
+                            empStmt.setString(1, searchPattern);
+                            empStmt.setString(2, searchPattern);
+                            empStmt.setString(3, searchPattern);
+                            empStmt.setString(4, searchPattern);
+                            empStmt.setString(5, searchPattern);
                             empRs = empStmt.executeQuery();
 
                             while(empRs.next()) {
@@ -126,7 +152,7 @@
                                 <!-- Employee Update Button -->
                                 <form action="update-employee.jsp" method="get" class="inline-form">
                                     <input id="user_id" name="user_id" type="hidden" value="<%= empRs.getInt("user_id") %>" />
-					<button type="submit" class="btn btn-secondary btn-sm">Update</button>
+                                    <button type="submit" class="btn btn-secondary btn-sm">Update</button>
                                 </form>
                             </td>
                         </tr>
@@ -161,8 +187,23 @@
                     <tbody>
                         <%
                             String memQuery = "SELECT u.user_id, u.first_name, u.last_name, u.user_name, u.active_flag, m.goals, m.health_notes " +
-                                              "FROM users u JOIN members m ON u.user_id = m.user_id WHERE u.user_type = 1";
+                                              "FROM users u JOIN members m ON u.user_id = m.user_id WHERE u.user_type = 1 AND (" +
+                                              "CAST(u.user_id AS CHAR) LIKE ? OR " +
+                                              "LOWER(u.first_name) LIKE ? OR " +
+                                              "LOWER(u.last_name) LIKE ? OR " +
+                                              "LOWER(CONCAT(u.first_name, ' ', u.last_name)) LIKE ? OR " +
+                                              "LOWER(u.user_name) LIKE ? OR " +
+                                              "LOWER(m.goals) LIKE ? OR " +
+                                              "LOWER(m.health_notes) LIKE ?)";
                             memStmt = con.prepareStatement(memQuery);
+
+                            memStmt.setString(1, searchPattern);
+                            memStmt.setString(2, searchPattern);
+                            memStmt.setString(3, searchPattern);
+                            memStmt.setString(4, searchPattern);
+                            memStmt.setString(5, searchPattern);
+                            memStmt.setString(6, searchPattern);
+                            memStmt.setString(7, searchPattern);
                             memRs = memStmt.executeQuery();
 
                             while(memRs.next()) {
@@ -199,7 +240,7 @@
                                 <!-- Member Update Button -->
                                 <form action="update-member.jsp" method="get" class="inline-form">
                                     <input id="user_id" name="user_id" type="hidden" value="<%= memRs.getInt("user_id") %>" />
-					<button type="submit" class="btn btn-secondary btn-sm">Update</button>
+                                    <button type="submit" class="btn btn-secondary btn-sm">Update</button>
                                 </form>
                             </td>
                         </tr>
@@ -222,22 +263,5 @@
         %>
     </main>
 
-    <!-- REAL-TIME SEARCH SCRIPT -->
-    <script>
-        function filterUsers() {
-            var input = document.getElementById("userSearchInput");
-            var filter = input.value.toLowerCase();
-            var rows = document.getElementsByClassName("user-row");
-
-            for (var i = 0; i < rows.length; i++) {
-                var rowText = rows[i].textContent || rows[i].innerText;
-                if (rowText.toLowerCase().indexOf(filter) > -1) {
-                    rows[i].style.display = "";
-                } else {
-                    rows[i].style.display = "none";
-                }
-            }
-        }
-    </script>
 </body>
 </html>
