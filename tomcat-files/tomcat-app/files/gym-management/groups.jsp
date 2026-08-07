@@ -218,7 +218,10 @@
 			    <button type="submit" class="btn btn-sm">Join</button>
 			    <% } %>
 			</form>
-			<% } %>
+			<% } else if (is_admin) { %>
+				<!-- ADMIN EDIT BUTTON -->
+				<a href="edit-group.jsp?group_id=<%= row.get("group_id") %>" class="btn btn-secondary btn-sm" style="text-decoration: none;">Edit Group</a>
+				<% } %>
 		    </div>
 		</div>
 		<% } %>
